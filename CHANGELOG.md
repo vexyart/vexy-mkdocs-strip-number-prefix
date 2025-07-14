@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed test configuration to properly initialize plugin config defaults
+- Fixed file path transformation logic to correctly update dest_path and URL
+- Fixed collision detection logic in non-strict mode
+- Updated GitHub URLs from placeholder to actual repository URLs
+- Added proper type annotations and resolved mypy warnings
+- Ensured git-tag-based VCS versioning with hatch-vcs works correctly
+
+### Added
+- Pre-commit configuration file with proper project path
+- Type ignore comments for MkDocs base plugin inheritance
+
+### Changed
+- Improved test fixtures to include required src_uri attribute for mock files
+- Enhanced file path replacement to use stem-based matching for MkDocs URL structure
+
 ## [0.2.0] - 2025-01-14
 
 ### Changed
