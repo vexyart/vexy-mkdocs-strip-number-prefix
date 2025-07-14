@@ -114,18 +114,20 @@ class StripNumberPrefixPlugin(BasePlugin):
                     continue
                 # Update file paths
                 file.src_path = new_path
-                
+
                 # For dest_path and url, we need to strip the prefix from the basename
                 old_basename = Path(old_path).name
                 new_basename = Path(new_path).name
-                
-                # Update dest_path by replacing the old basename with new basename
-                file.dest_path = file.dest_path.replace(old_basename, new_basename)
-                
-                # Update URL by replacing the old basename (without .md) with new basename
-                old_url_part = old_basename.replace(".md", "")
-                new_url_part = new_basename.replace(".md", "")
-                file.url = file.url.replace(old_url_part, new_url_part)
+
+                # For dest_path, we need to replace the directory name (without .md extension)
+                old_name_without_ext = Path(old_path).stem  # filename without extension
+                new_name_without_ext = Path(new_path).stem  # filename without extension
+
+                # Update dest_path by replacing the old directory name with new directory name
+                file.dest_path = file.dest_path.replace(old_name_without_ext, new_name_without_ext)
+
+                # Update URL by replacing the old directory name with new directory name
+                file.url = file.url.replace(old_name_without_ext, new_name_without_ext)
 
                 # Store mapping for link rewriting
                 self.processed_files[old_path] = new_path

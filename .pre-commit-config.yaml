@@ -1,4 +1,4 @@
-# this_file: more/vexy-mkdocs-output-as-input-refactored/.pre-commit-config.yaml
+# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/.pre-commit-config.yaml
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
@@ -31,7 +31,7 @@ repos:
     rev: 23.12.1
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6
