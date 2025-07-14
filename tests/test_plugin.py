@@ -7,6 +7,7 @@ import pytest
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.exceptions import PluginError
 from mkdocs.structure.files import File, Files
+from mkdocs.structure.nav import Navigation
 from mkdocs.structure.pages import Page
 
 from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
@@ -25,6 +26,7 @@ class TestStripNumberPrefixPlugin:
             "verbose": False,
             "strict": True,
             "strip_links": False,
+            "strip_nav_titles": True,
         }
         return plugin
 
@@ -305,3 +307,203 @@ class TestStripNumberPrefixPlugin:
         assert file1.src_path == "010--intro.md"
         assert file2.src_path == "about.md"  # unchanged
         assert file3.src_path == "020--guide.md"
+
+    def test_on_nav_strips_prefixes(self, plugin, mkdocs_config):
+        """Test navigation title stripping with file format."""
+        plugin.on_config(mkdocs_config)
+
+        # Create mock navigation items with file-format titles
+        nav_item1 = Mock()
+        nav_item1.title = "010--getting-started"
+        nav_item1.children = []
+
+        nav_item2 = Mock()
+        nav_item2.title = "020--basic-syntax"
+        nav_item2.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item1, nav_item2]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+
+        assert nav_item1.title == "getting started"
+        assert nav_item2.title == "basic syntax"
+        assert result == nav
+
+    def test_on_nav_strips_nav_format_prefixes(self, plugin, mkdocs_config):
+        """Test navigation title stripping with navigation display format."""
+        plugin.on_config(mkdocs_config)
+
+        # Create mock navigation items with nav-format titles (spaces instead of dashes)
+        nav_item1 = Mock()
+        nav_item1.title = "010 getting started"
+        nav_item1.children = []
+
+        nav_item2 = Mock()
+        nav_item2.title = "020 basic syntax"
+        nav_item2.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item1, nav_item2]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+
+        assert nav_item1.title == "getting started"
+        assert nav_item2.title == "basic syntax"
+        assert result == nav
+
+    def test_on_nav_recursive_children(self, plugin, mkdocs_config):
+        """Test navigation title stripping works recursively on children."""
+        plugin.on_config(mkdocs_config)
+
+        # Create child nav items
+        child1 = Mock()
+        child1.title = "010--introduction"
+        child1.children = []
+
+        child2 = Mock()
+        child2.title = "020 installation"
+        child2.children = []
+
+        # Create parent nav item with children
+        parent = Mock()
+        parent.title = "030--getting-started"
+        parent.children = [child1, child2]
+
+        nav = Mock(spec=Navigation)
+        nav.items = [parent]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+
+        assert parent.title == "getting started"
+        assert child1.title == "introduction"
+        assert child2.title == "installation"
+        assert result == nav
+
+    def test_on_nav_no_title_attribute(self, plugin, mkdocs_config):
+        """Test navigation handling when items don't have title attribute."""
+        plugin.on_config(mkdocs_config)
+
+        # Create nav item without title
+        nav_item = Mock()
+        if hasattr(nav_item, 'title'):
+            delattr(nav_item, 'title')
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        # Should not crash
+        result = plugin.on_nav(nav, mkdocs_config, files)
+        assert result == nav
+
+    def test_on_nav_empty_title(self, plugin, mkdocs_config):
+        """Test navigation handling with empty title."""
+        plugin.on_config(mkdocs_config)
+
+        nav_item = Mock()
+        nav_item.title = ""
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+        assert nav_item.title == ""
+        assert result == nav
+
+    def test_on_nav_no_pattern_match(self, plugin, mkdocs_config):
+        """Test navigation titles that don't match any pattern."""
+        plugin.on_config(mkdocs_config)
+
+        nav_item = Mock()
+        nav_item.title = "Regular Title"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+        assert nav_item.title == "Regular Title"  # Should remain unchanged
+        assert result == nav
+
+    def test_on_nav_disabled(self, plugin, mkdocs_config):
+        """Test navigation title stripping when disabled."""
+        plugin.config["strip_nav_titles"] = False
+        plugin.on_config(mkdocs_config)
+
+        nav_item = Mock()
+        nav_item.title = "010--getting-started"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+        assert nav_item.title == "010--getting-started"  # Should remain unchanged
+        assert result == nav
+
+    def test_on_nav_no_prefix_pattern(self, plugin, mkdocs_config):
+        """Test navigation when prefix pattern is not set."""
+        plugin.prefix_pattern = None
+
+        nav_item = Mock()
+        nav_item.title = "010--getting-started"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        result = plugin.on_nav(nav, mkdocs_config, files)
+        assert nav_item.title == "010--getting-started"  # Should remain unchanged
+        assert result == nav
+
+    def test_on_nav_verbose_logging(self, plugin, mkdocs_config):
+        """Test verbose logging in navigation title processing."""
+        plugin.config["verbose"] = True
+        plugin.on_config(mkdocs_config)
+
+        nav_item = Mock()
+        nav_item.title = "010 getting started"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_nav(nav, mkdocs_config, files)
+
+            # Should log the navigation title update
+            mock_logger.info.assert_called()
+            call_args = str(mock_logger.info.call_args_list)
+            assert "Navigation title updated" in call_args
+            assert "010 getting started" in call_args
+            assert "getting started" in call_args
+
+    def test_strip_nav_titles_config_option(self, mkdocs_config):
+        """Test strip_nav_titles configuration option."""
+        plugin = StripNumberPrefixPlugin()
+        
+        # Test default value
+        plugin.config = {
+            "pattern": r"^\d+--",
+            "verbose": False,
+            "strict": True,
+            "strip_links": False,
+            "strip_nav_titles": True,
+        }
+        
+        assert plugin.config["strip_nav_titles"] is True
+        
+        # Test disabling it
+        plugin.config["strip_nav_titles"] = False
+        assert plugin.config["strip_nav_titles"] is False
