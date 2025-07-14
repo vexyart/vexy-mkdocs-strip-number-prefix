@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **CRITICAL**: Fixed src_path modification issue that caused FileNotFoundError during MkDocs builds
+- Fixed navigation title display to strip numeric prefixes from tab and sidebar navigation
 - Fixed test configuration to properly initialize plugin config defaults
 - Fixed file path transformation logic to correctly update dest_path and URL
 - Fixed collision detection logic in non-strict mode
@@ -16,12 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensured git-tag-based VCS versioning with hatch-vcs works correctly
 
 ### Added
+- **NEW**: Navigation title stripping via `strip_nav_titles` configuration option (enabled by default)
+- **NEW**: `on_nav` hook to clean navigation titles in both tab and sidebar navigation
+- Virtual path strategy for collision detection without modifying source paths
+- Support for both file format (`010--title`) and navigation format (`010 title`) patterns
+- Demo documentation with MkDocs Material theme showcasing plugin functionality
 - Pre-commit configuration file with proper project path
 - Type ignore comments for MkDocs base plugin inheritance
 
 ### Changed
+- **BREAKING**: Plugin no longer modifies `src_path` - preserves original file paths on disk
+- Enhanced collision detection to use virtual clean paths instead of modified source paths
+- Improved file path replacement to use stem-based matching for MkDocs URL structure
+- Updated logging to reflect virtual path transformations
 - Improved test fixtures to include required src_uri attribute for mock files
-- Enhanced file path replacement to use stem-based matching for MkDocs URL structure
 
 ## [0.2.0] - 2025-01-14
 
