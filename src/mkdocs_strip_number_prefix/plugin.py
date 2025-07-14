@@ -102,15 +102,30 @@ class StripNumberPrefixPlugin(BasePlugin):
                 else:
                     logger.warning(f"StripNumberPrefix: {msg}")
 
-        # Apply transformations if no strict collisions
-        if not (has_collision and self.config["strict"]):
+        # Apply transformations only if no collisions, or in non-strict mode skip collision files
+        if has_collision and self.config["strict"]:
+            # In strict mode, we already raised an error, so this won't be reached
+            pass
+        else:
+            # Apply transformations, but skip collision files in non-strict mode
             for file, old_path, new_path in transformations:
+                # In non-strict mode, skip files that would cause collisions
+                if has_collision and new_path in self.collisions:
+                    continue
                 # Update file paths
                 file.src_path = new_path
-                file.dest_path = file.dest_path.replace(old_path, new_path)
-                file.url = file.url.replace(
-                    old_path.replace(".md", ""), new_path.replace(".md", "")
-                )
+                
+                # For dest_path and url, we need to strip the prefix from the basename
+                old_basename = Path(old_path).name
+                new_basename = Path(new_path).name
+                
+                # Update dest_path by replacing the old basename with new basename
+                file.dest_path = file.dest_path.replace(old_basename, new_basename)
+                
+                # Update URL by replacing the old basename (without .md) with new basename
+                old_url_part = old_basename.replace(".md", "")
+                new_url_part = new_basename.replace(".md", "")
+                file.url = file.url.replace(old_url_part, new_url_part)
 
                 # Store mapping for link rewriting
                 self.processed_files[old_path] = new_path

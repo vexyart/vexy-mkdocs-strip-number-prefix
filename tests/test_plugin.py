@@ -18,7 +18,15 @@ class TestStripNumberPrefixPlugin:
     @pytest.fixture
     def plugin(self):
         """Create a plugin instance."""
-        return StripNumberPrefixPlugin()
+        plugin = StripNumberPrefixPlugin()
+        # Initialize plugin config with defaults
+        plugin.config = {
+            "pattern": r"^\d+--",
+            "verbose": False,
+            "strict": True,
+            "strip_links": False,
+        }
+        return plugin
 
     @pytest.fixture
     def mkdocs_config(self):
@@ -33,6 +41,7 @@ class TestStripNumberPrefixPlugin:
         """Create a mock file."""
         file = Mock(spec=File)
         file.is_documentation_page.return_value = True
+        file.src_uri = "test.md"  # Add required src_uri attribute
         return file
 
     def test_default_pattern(self, plugin, mkdocs_config):
@@ -77,6 +86,7 @@ class TestStripNumberPrefixPlugin:
         mock_file.src_path = "010--intro.md"
         mock_file.dest_path = "010--intro/index.html"
         mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
 
         files = Files([mock_file])
 
@@ -95,6 +105,7 @@ class TestStripNumberPrefixPlugin:
         mock_file.src_path = "guides/020--setup.md"
         mock_file.dest_path = "guides/020--setup/index.html"
         mock_file.url = "guides/020--setup/"
+        mock_file.src_uri = "guides/020--setup.md"
 
         files = Files([mock_file])
         plugin.on_files(files, mkdocs_config)
@@ -110,6 +121,7 @@ class TestStripNumberPrefixPlugin:
         mock_file.src_path = "regular-file.md"
         mock_file.dest_path = "regular-file/index.html"
         mock_file.url = "regular-file/"
+        mock_file.src_uri = "regular-file.md"
 
         files = Files([mock_file])
         plugin.on_files(files, mkdocs_config)
@@ -128,10 +140,12 @@ class TestStripNumberPrefixPlugin:
         file1 = Mock(spec=File)
         file1.is_documentation_page.return_value = True
         file1.src_path = "010--intro.md"
+        file1.src_uri = "010--intro.md"
 
         file2 = Mock(spec=File)
         file2.is_documentation_page.return_value = True
         file2.src_path = "020--intro.md"
+        file2.src_uri = "020--intro.md"
 
         files = Files([file1, file2])
 
@@ -151,12 +165,14 @@ class TestStripNumberPrefixPlugin:
         file1.src_path = "010--intro.md"
         file1.dest_path = "010--intro/index.html"
         file1.url = "010--intro/"
+        file1.src_uri = "010--intro.md"
 
         file2 = Mock(spec=File)
         file2.is_documentation_page.return_value = True
         file2.src_path = "020--intro.md"
         file2.dest_path = "020--intro/index.html"
         file2.url = "020--intro/"
+        file2.src_uri = "020--intro.md"
 
         files = Files([file1, file2])
 
@@ -225,6 +241,7 @@ class TestStripNumberPrefixPlugin:
         file = Mock(spec=File)
         file.is_documentation_page.return_value = False
         file.src_path = "010--image.png"
+        file.src_uri = "010--image.png"
 
         files = Files([file])
         plugin.on_files(files, mkdocs_config)
@@ -240,6 +257,7 @@ class TestStripNumberPrefixPlugin:
         mock_file.src_path = "010--intro.md"
         mock_file.dest_path = "010--intro/index.html"
         mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
 
         files = Files([mock_file])
 
@@ -262,18 +280,21 @@ class TestStripNumberPrefixPlugin:
         file1.src_path = "010--intro.md"
         file1.dest_path = "010--intro/index.html"
         file1.url = "010--intro/"
+        file1.src_uri = "010--intro.md"
 
         file2 = Mock(spec=File)
         file2.is_documentation_page.return_value = True
         file2.src_path = "about.md"
         file2.dest_path = "about/index.html"
         file2.url = "about/"
+        file2.src_uri = "about.md"
 
         file3 = Mock(spec=File)
         file3.is_documentation_page.return_value = True
         file3.src_path = "020--guide.md"
         file3.dest_path = "020--guide/index.html"
         file3.url = "020--guide/"
+        file3.src_uri = "020--guide.md"
 
         files = Files([file1, file2, file3])
         plugin.on_files(files, mkdocs_config)

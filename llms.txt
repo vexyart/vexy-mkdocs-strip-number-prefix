@@ -1,0 +1,4228 @@
+Project Structure:
+📁 vexy-mkdocs-strip-number-prefix
+├── 📁 .github
+│   └── 📁 workflows
+│       ├── 📄 ci.yml
+│       └── 📄 release.yml
+├── 📁 src
+│   └── 📁 mkdocs_strip_number_prefix
+│       ├── 📄 __init__.py
+│       └── 📄 plugin.py
+├── 📁 tests
+│   └── 📄 test_plugin.py
+├── 📄 .gitignore
+├── 📄 AGENTS.md
+├── 📄 CHANGELOG.md
+├── 📄 CLAUDE.md
+├── 📄 GEMINI.md
+├── 📄 LICENSE
+├── 📄 llms.txt
+├── 📄 pyproject.toml
+├── 📄 README.md
+└── 📄 TODO.md
+
+
+<documents>
+<document index="1">
+<source>.github/workflows/ci.yml</source>
+<document_content>
+# this_file: more/mkdocs-strip-number-prefix-refactored/.github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for setuptools-scm
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run pre-commit
+        if: matrix.python-version == '3.11'
+        run: pre-commit run --all-files
+
+      - name: Run tests
+        run: |
+          pytest -v --cov=mkdocs_strip_number_prefix --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run ruff
+        run: ruff check --output-format=github .
+
+      - name: Run black
+        run: black --check --diff .
+
+      - name: Run mypy
+        run: mypy src
+</document_content>
+</document>
+
+<document index="2">
+<source>.github/workflows/release.yml</source>
+<document_content>
+# this_file: more/mkdocs-strip-number-prefix-refactored/.github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write  # Required for PyPI trusted publishing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for setuptools-scm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mkdocs-strip-number-prefix
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Trusted publishing configured in PyPI project settings
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          version=${GITHUB_REF#refs/tags/v}
+          awk "/## \[$version\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.changelog.outputs.version }}
+          body_path: release_notes.md
+          files: dist/*
+          draft: false
+          prerelease: false
+</document_content>
+</document>
+
+<document index="3">
+<source>.gitignore</source>
+<document_content>
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+.env
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# MkDocs
+site/
+.cache/
+
+# setuptools-scm
+src/mkdocs_strip_number_prefix/_version.py
+</document_content>
+</document>
+
+<document index="4">
+<source>AGENTS.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="5">
+<source>CHANGELOG.md</source>
+<document_content>
+# Changelog
+
+All notable changes to vexy-mkdocs-strip-number-prefix will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.0] - 2025-01-14
+
+### Changed
+- **BREAKING**: Migrated to src-layout package structure
+- **BREAKING**: Minimum Python version is now 3.9
+- **BREAKING**: Improved type safety with strict typing
+- Modernized packaging with PEP 621 compliant pyproject.toml
+- Switched to standard library logging for better integration
+
+### Added
+- Comprehensive test suite with >90% coverage
+- Pre-commit hooks for code quality
+- GitHub Actions CI/CD workflows
+- Support for Python 3.9, 3.10, 3.11, and 3.12
+- Automated release process with trusted PyPI publishing
+- Enhanced documentation with examples and troubleshooting
+- Better error messages for collision detection
+- Improved link rewriting with anchor support
+
+### Fixed
+- Better handling of subdirectory paths
+- Improved regex pattern validation
+- More robust collision detection
+- Enhanced link rewriting for complex markdown structures
+
+## [0.1.0] - 2025-01-10
+
+### Added
+- Initial release of vexy-mkdocs-strip-number-prefix plugin
+- Core functionality to strip numeric prefixes from URLs while preserving source filenames
+- Configurable regex pattern for matching prefixes (default: `^\\d+--`)
+- Collision detection with strict/non-strict modes
+- Optional internal link rewriting (`strip_links` option)
+- Verbose logging mode for debugging
+- Comprehensive error handling with helpful messages
+- Support for MkDocs 1.5.0+
+
+### Features
+- **Pattern Matching**: Flexible regex-based prefix detection
+- **Collision Detection**: Prevents duplicate URLs with configurable strictness
+- **Link Rewriting**: Automatically updates internal markdown links
+- **Debug Mode**: Detailed logging for troubleshooting
+- **Type Safety**: Full type hints for better IDE support
+
+[Unreleased]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/releases/tag/v0.1.0
+</document_content>
+</document>
+
+<document index="6">
+<source>CLAUDE.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="7">
+<source>GEMINI.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="8">
+<source>LICENSE</source>
+<document_content>
+MIT License
+
+Copyright (c) 2025 MkDocs Strip Number Prefix Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</document_content>
+</document>
+
+<document index="9">
+<source>README.md</source>
+<document_content>
+# vexy-mkdocs-strip-number-prefix
+
+[![PyPI version](https://badge.fury.io/py/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
+[![CI](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/workflows/CI/badge.svg)](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python versions](https://img.shields.io/pypi/pyversions/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
+
+A lightweight MkDocs plugin that strips numeric prefixes from page URLs while preserving them in source filenames for natural sorting.
+
+## Features
+
+- ✅ **Clean URLs**: Remove numeric prefixes from generated URLs
+- ✅ **Natural Sorting**: Keep prefixes in source files for predictable ordering
+- ✅ **Collision Detection**: Prevent duplicate URLs with configurable strictness
+- ✅ **Link Rewriting**: Automatically update internal markdown links
+- ✅ **Flexible Patterns**: Customize prefix matching with regex patterns
+- ✅ **Debug Support**: Verbose logging for troubleshooting
+
+## Installation
+
+Install from PyPI:
+
+```bash
+uv pip install --system --upgrade vexy-mkdocs-strip-number-prefix
+```
+
+or from source: 
+
+```
+pip install git+https://github.com/vexyart/vexy-mkdocs-strip-number-prefix
+```
+
+## Quick Start
+
+Add the plugin to your `mkdocs.yml`:
+
+```yaml
+plugins:
+  - search
+  - strip-number-prefix
+```
+
+Name your files with numeric prefixes:
+
+```
+docs/
+├── 010--introduction.md
+├── 020--getting-started.md
+├── 030--configuration.md
+└── 999--faq.md
+```
+
+Build your site:
+
+```bash
+mkdocs build
+```
+
+Generated URLs will be clean:
+- `/introduction/`
+- `/getting-started/`
+- `/configuration/`
+- `/faq/`
+
+## Configuration
+
+All configuration options with their defaults:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      pattern: '^\\d+--'     # Regex pattern for prefix (default: '^\\d+--')
+      verbose: false         # Enable debug logging (default: false)
+      strict: true           # Fail on slug collisions (default: true)
+      strip_links: false     # Strip prefixes from markdown links (default: false)
+```
+
+### Pattern Examples
+
+| Pattern | Matches | Example |
+|---------|---------|---------|
+| `^\\d+--` | Any digits + `--` | `123--file.md` |
+| `^\\d{3}--` | Exactly 3 digits + `--` | `001--file.md` |
+| `^\\d+-` | Any digits + `-` | `42-file.md` |
+| `^\\d+\\.` | Any digits + `.` | `1.file.md` |
+
+### Collision Handling
+
+When multiple files would generate the same URL after prefix removal:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      strict: true   # Fail build (recommended)
+      # strict: false  # Log warning and continue
+```
+
+### Link Rewriting
+
+Automatically update internal markdown links:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      strip_links: true
+```
+
+Before:
+```markdown
+[Setup Guide](020--setup.md)
+```
+
+After:
+```markdown
+[Setup Guide](setup.md)
+```
+
+## Examples
+
+### Basic Usage
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+plugins:
+  - strip-number-prefix
+```
+
+### With Material Theme
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+
+plugins:
+  - search
+  - strip-number-prefix:
+      pattern: '^\\d{3}--'
+      verbose: true
+```
+
+### With Awesome Nav
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+plugins:
+  - search
+  - awesome-nav
+  - strip-number-prefix:
+      pattern: '^\\d+--'
+      strip_links: true
+```
+
+### Custom Pattern
+
+```yaml
+# mkdocs.yml
+plugins:
+  - strip-number-prefix:
+      pattern: '^\\d{2}\\.'  # Matches: 01.file.md, 99.file.md
+      strict: false
+```
+
+## File Organization Strategies
+
+### Sequential Numbering
+
+```
+docs/
+├── 010--introduction.md
+├── 020--installation.md
+├── 030--configuration.md
+├── 040--advanced.md
+└── 999--troubleshooting.md
+```
+
+### Hierarchical Numbering
+
+```
+docs/
+├── 100--getting-started.md
+├── 110--installation.md
+├── 120--first-steps.md
+├── 200--configuration.md
+├── 210--basic-config.md
+├── 220--advanced-config.md
+└── 900--appendix.md
+```
+
+### Category Prefixes
+
+```
+docs/
+├── 01--intro/
+│   ├── 010--overview.md
+│   └── 020--quickstart.md
+├── 02--guides/
+│   ├── 010--setup.md
+│   └── 020--deployment.md
+└── 99--reference/
+    └── 010--api.md
+```
+
+## Compatibility
+
+- **MkDocs**: >= 1.5.0
+- **Python**: >= 3.9
+- **Works with**:
+  - [Material for MkDocs](https://squidfunk.github.io/vexy-mkdocs-material/)
+  - [vexy-mkdocs-awesome-nav](https://github.com/lukasgeiter/vexy-mkdocs-awesome-nav)
+  - [vexy-mkdocs-nav-weight](https://github.com/shu307/vexy-mkdocs-nav-weight)
+  - Most other MkDocs plugins
+
+## Troubleshooting
+
+### Duplicate URLs
+
+```
+ERROR: Multiple files would map to 'intro.md': 010--intro.md, 020--intro.md
+```
+
+**Solution**: Use unique base names:
+- `010--intro-basics.md`
+- `020--intro-advanced.md`
+
+### Broken Links
+
+When `strip_links: false` (default), use clean slugs in links:
+
+```markdown
+✅ [Next page](configuration.md)
+❌ [Next page](030--configuration.md)
+```
+
+When `strip_links: true`, both forms work:
+
+```markdown
+✅ [Next page](configuration.md)
+✅ [Next page](030--configuration.md)  # Auto-converted
+```
+
+### Debug Mode
+
+Enable verbose logging:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      verbose: true
+```
+
+This shows:
+- File transformations
+- URL mappings
+- Collision warnings
+- Link rewriting
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/yourusername/vexy-mkdocs-strip-number-prefix
+cd vexy-mkdocs-strip-number-prefix
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -e .[dev]
+pre-commit install
+```
+
+### Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run specific test
+pytest tests/test_plugin.py::TestStripNumberPrefixPlugin::test_default_pattern
+```
+
+### Code Quality
+
+```bash
+# Format and lint
+black src tests
+ruff check --fix src tests
+mypy src
+```
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Support
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/discussions)
+- 📖 **Documentation**: [Project Documentation](https://yourusername.github.io/vexy-mkdocs-strip-number-prefix/)
+</document_content>
+</document>
+
+<document index="10">
+<source>TODO.md</source>
+<document_content>
+# TODO
+
+- [ ] Ensure git-tag-based VCS versioning with hatch is working
+- [ ] Critical syntax errors in
+src/mkdocs_strip_number_prefix/p
+lugin.py
+- [ ] Incomplete test 
+implementations in
+tests/test_plugin.py
+- [ ] Missing version file
+referenced in __init__.py
+- [ ] Missing pre-commit 
+configuration
+- [ ] Placeholder GitHub URLs in
+documentation
+- [ ] Need to run tests to verify
+functionality
+
+
+</document_content>
+</document>
+
+<document index="11">
+<source>llms.txt</source>
+<document_content>
+Project Structure:
+📁 vexy-mkdocs-strip-number-prefix
+├── 📁 .github
+│   └── 📁 workflows
+│       ├── 📄 ci.yml
+│       └── 📄 release.yml
+├── 📁 src
+│   └── 📁 mkdocs_strip_number_prefix
+│       ├── 📄 __init__.py
+│       └── 📄 plugin.py
+├── 📁 tests
+│   └── 📄 test_plugin.py
+├── 📄 .gitignore
+├── 📄 AGENTS.md
+├── 📄 CHANGELOG.md
+├── 📄 CLAUDE.md
+├── 📄 GEMINI.md
+├── 📄 LICENSE
+├── 📄 llms.txt
+├── 📄 pyproject.toml
+├── 📄 README.md
+└── 📄 TODO.md
+
+
+<documents>
+<document index="1">
+<source>.github/workflows/ci.yml</source>
+<document_content>
+# this_file: more/mkdocs-strip-number-prefix-refactored/.github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for setuptools-scm
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run pre-commit
+        if: matrix.python-version == '3.11'
+        run: pre-commit run --all-files
+
+      - name: Run tests
+        run: |
+          pytest -v --cov=mkdocs_strip_number_prefix --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run ruff
+        run: ruff check --output-format=github .
+
+      - name: Run black
+        run: black --check --diff .
+
+      - name: Run mypy
+        run: mypy src
+</document_content>
+</document>
+
+<document index="2">
+<source>.github/workflows/release.yml</source>
+<document_content>
+# this_file: more/mkdocs-strip-number-prefix-refactored/.github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write  # Required for PyPI trusted publishing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for setuptools-scm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mkdocs-strip-number-prefix
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Trusted publishing configured in PyPI project settings
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          version=${GITHUB_REF#refs/tags/v}
+          awk "/## \[$version\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.changelog.outputs.version }}
+          body_path: release_notes.md
+          files: dist/*
+          draft: false
+          prerelease: false
+</document_content>
+</document>
+
+<document index="3">
+<source>.gitignore</source>
+<document_content>
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+.env
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# MkDocs
+site/
+.cache/
+
+# setuptools-scm
+src/mkdocs_strip_number_prefix/_version.py
+</document_content>
+</document>
+
+<document index="4">
+<source>AGENTS.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="5">
+<source>CHANGELOG.md</source>
+<document_content>
+# Changelog
+
+All notable changes to vexy-mkdocs-strip-number-prefix will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.0] - 2025-01-14
+
+### Changed
+- **BREAKING**: Migrated to src-layout package structure
+- **BREAKING**: Minimum Python version is now 3.9
+- **BREAKING**: Improved type safety with strict typing
+- Modernized packaging with PEP 621 compliant pyproject.toml
+- Switched to standard library logging for better integration
+
+### Added
+- Comprehensive test suite with >90% coverage
+- Pre-commit hooks for code quality
+- GitHub Actions CI/CD workflows
+- Support for Python 3.9, 3.10, 3.11, and 3.12
+- Automated release process with trusted PyPI publishing
+- Enhanced documentation with examples and troubleshooting
+- Better error messages for collision detection
+- Improved link rewriting with anchor support
+
+### Fixed
+- Better handling of subdirectory paths
+- Improved regex pattern validation
+- More robust collision detection
+- Enhanced link rewriting for complex markdown structures
+
+## [0.1.0] - 2025-01-10
+
+### Added
+- Initial release of vexy-mkdocs-strip-number-prefix plugin
+- Core functionality to strip numeric prefixes from URLs while preserving source filenames
+- Configurable regex pattern for matching prefixes (default: `^\\d+--`)
+- Collision detection with strict/non-strict modes
+- Optional internal link rewriting (`strip_links` option)
+- Verbose logging mode for debugging
+- Comprehensive error handling with helpful messages
+- Support for MkDocs 1.5.0+
+
+### Features
+- **Pattern Matching**: Flexible regex-based prefix detection
+- **Collision Detection**: Prevents duplicate URLs with configurable strictness
+- **Link Rewriting**: Automatically updates internal markdown links
+- **Debug Mode**: Detailed logging for troubleshooting
+- **Type Safety**: Full type hints for better IDE support
+
+[Unreleased]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/releases/tag/v0.1.0
+</document_content>
+</document>
+
+<document index="6">
+<source>CLAUDE.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="7">
+<source>GEMINI.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="8">
+<source>LICENSE</source>
+<document_content>
+MIT License
+
+Copyright (c) 2025 MkDocs Strip Number Prefix Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</document_content>
+</document>
+
+<document index="9">
+<source>README.md</source>
+<document_content>
+# vexy-mkdocs-strip-number-prefix
+
+[![PyPI version](https://badge.fury.io/py/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
+[![CI](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/workflows/CI/badge.svg)](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python versions](https://img.shields.io/pypi/pyversions/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
+
+A lightweight MkDocs plugin that strips numeric prefixes from page URLs while preserving them in source filenames for natural sorting.
+
+## Features
+
+- ✅ **Clean URLs**: Remove numeric prefixes from generated URLs
+- ✅ **Natural Sorting**: Keep prefixes in source files for predictable ordering
+- ✅ **Collision Detection**: Prevent duplicate URLs with configurable strictness
+- ✅ **Link Rewriting**: Automatically update internal markdown links
+- ✅ **Flexible Patterns**: Customize prefix matching with regex patterns
+- ✅ **Debug Support**: Verbose logging for troubleshooting
+
+## Installation
+
+Install from PyPI:
+
+```bash
+uv pip install --system --upgrade vexy-mkdocs-strip-number-prefix
+```
+
+or from source: 
+
+```
+pip install git+https://github.com/vexyart/vexy-mkdocs-strip-number-prefix
+```
+
+## Quick Start
+
+Add the plugin to your `mkdocs.yml`:
+
+```yaml
+plugins:
+  - search
+  - strip-number-prefix
+```
+
+Name your files with numeric prefixes:
+
+```
+docs/
+├── 010--introduction.md
+├── 020--getting-started.md
+├── 030--configuration.md
+└── 999--faq.md
+```
+
+Build your site:
+
+```bash
+mkdocs build
+```
+
+Generated URLs will be clean:
+- `/introduction/`
+- `/getting-started/`
+- `/configuration/`
+- `/faq/`
+
+## Configuration
+
+All configuration options with their defaults:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      pattern: '^\\d+--'     # Regex pattern for prefix (default: '^\\d+--')
+      verbose: false         # Enable debug logging (default: false)
+      strict: true           # Fail on slug collisions (default: true)
+      strip_links: false     # Strip prefixes from markdown links (default: false)
+```
+
+### Pattern Examples
+
+| Pattern | Matches | Example |
+|---------|---------|---------|
+| `^\\d+--` | Any digits + `--` | `123--file.md` |
+| `^\\d{3}--` | Exactly 3 digits + `--` | `001--file.md` |
+| `^\\d+-` | Any digits + `-` | `42-file.md` |
+| `^\\d+\\.` | Any digits + `.` | `1.file.md` |
+
+### Collision Handling
+
+When multiple files would generate the same URL after prefix removal:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      strict: true   # Fail build (recommended)
+      # strict: false  # Log warning and continue
+```
+
+### Link Rewriting
+
+Automatically update internal markdown links:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      strip_links: true
+```
+
+Before:
+```markdown
+[Setup Guide](020--setup.md)
+```
+
+After:
+```markdown
+[Setup Guide](setup.md)
+```
+
+## Examples
+
+### Basic Usage
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+plugins:
+  - strip-number-prefix
+```
+
+### With Material Theme
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+
+plugins:
+  - search
+  - strip-number-prefix:
+      pattern: '^\\d{3}--'
+      verbose: true
+```
+
+### With Awesome Nav
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+plugins:
+  - search
+  - awesome-nav
+  - strip-number-prefix:
+      pattern: '^\\d+--'
+      strip_links: true
+```
+
+### Custom Pattern
+
+```yaml
+# mkdocs.yml
+plugins:
+  - strip-number-prefix:
+      pattern: '^\\d{2}\\.'  # Matches: 01.file.md, 99.file.md
+      strict: false
+```
+
+## File Organization Strategies
+
+### Sequential Numbering
+
+```
+docs/
+├── 010--introduction.md
+├── 020--installation.md
+├── 030--configuration.md
+├── 040--advanced.md
+└── 999--troubleshooting.md
+```
+
+### Hierarchical Numbering
+
+```
+docs/
+├── 100--getting-started.md
+├── 110--installation.md
+├── 120--first-steps.md
+├── 200--configuration.md
+├── 210--basic-config.md
+├── 220--advanced-config.md
+└── 900--appendix.md
+```
+
+### Category Prefixes
+
+```
+docs/
+├── 01--intro/
+│   ├── 010--overview.md
+│   └── 020--quickstart.md
+├── 02--guides/
+│   ├── 010--setup.md
+│   └── 020--deployment.md
+└── 99--reference/
+    └── 010--api.md
+```
+
+## Compatibility
+
+- **MkDocs**: >= 1.5.0
+- **Python**: >= 3.9
+- **Works with**:
+  - [Material for MkDocs](https://squidfunk.github.io/vexy-mkdocs-material/)
+  - [vexy-mkdocs-awesome-nav](https://github.com/lukasgeiter/vexy-mkdocs-awesome-nav)
+  - [vexy-mkdocs-nav-weight](https://github.com/shu307/vexy-mkdocs-nav-weight)
+  - Most other MkDocs plugins
+
+## Troubleshooting
+
+### Duplicate URLs
+
+```
+ERROR: Multiple files would map to 'intro.md': 010--intro.md, 020--intro.md
+```
+
+**Solution**: Use unique base names:
+- `010--intro-basics.md`
+- `020--intro-advanced.md`
+
+### Broken Links
+
+When `strip_links: false` (default), use clean slugs in links:
+
+```markdown
+✅ [Next page](configuration.md)
+❌ [Next page](030--configuration.md)
+```
+
+When `strip_links: true`, both forms work:
+
+```markdown
+✅ [Next page](configuration.md)
+✅ [Next page](030--configuration.md)  # Auto-converted
+```
+
+### Debug Mode
+
+Enable verbose logging:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      verbose: true
+```
+
+This shows:
+- File transformations
+- URL mappings
+- Collision warnings
+- Link rewriting
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/yourusername/vexy-mkdocs-strip-number-prefix
+cd vexy-mkdocs-strip-number-prefix
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -e .[dev]
+pre-commit install
+```
+
+### Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run specific test
+pytest tests/test_plugin.py::TestStripNumberPrefixPlugin::test_default_pattern
+```
+
+### Code Quality
+
+```bash
+# Format and lint
+black src tests
+ruff check --fix src tests
+mypy src
+```
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Support
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/discussions)
+- 📖 **Documentation**: [Project Documentation](https://yourusername.github.io/vexy-mkdocs-strip-number-prefix/)
+</document_content>
+</document>
+
+<document index="10">
+<source>TODO.md</source>
+<document_content>
+# TODO
+
+- [ ] Ensure git-tag-based VCS versioning with hatch is working
+- [ ] Critical syntax errors in
+src/mkdocs_strip_number_prefix/p
+lugin.py
+- [ ] Incomplete test 
+implementations in
+tests/test_plugin.py
+- [ ] Missing version file
+referenced in __init__.py
+- [ ] Missing pre-commit 
+configuration
+- [ ] Placeholder GitHub URLs in
+documentation
+- [ ] Need to run tests to verify
+functionality
+
+
+</document_content>
+</document>
+
+<document index="11">
+<source>llms.txt</source>
+<document_content>
+Project Structure:
+📁 vexy-mkdocs-strip-number-prefix
+├── 📁 .github
+│   └── 📁 workflows
+│       ├── 📄 ci.yml
+│       └── 📄 release.yml
+├── 📁 src
+│   └── 📁 mkdocs_strip_number_prefix
+│       ├── 📄 __init__.py
+│       └── 📄 plugin.py
+├── 📁 tests
+│   └── 📄 test_plugin.py
+├── 📄 .gitignore
+├── 📄 AGENTS.md
+├── 📄 CHANGELOG.md
+├── 📄 CLAUDE.md
+├── 📄 GEMINI.md
+├── 📄 LICENSE
+├── 📄 pyproject.toml
+├── 📄 README.md
+└── 📄 TODO.md
+
+
+<documents>
+<document index="1">
+<source>.github/workflows/ci.yml</source>
+<document_content>
+# this_file: more/mkdocs-strip-number-prefix-refactored/.github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for setuptools-scm
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run pre-commit
+        if: matrix.python-version == '3.11'
+        run: pre-commit run --all-files
+
+      - name: Run tests
+        run: |
+          pytest -v --cov=mkdocs_strip_number_prefix --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run ruff
+        run: ruff check --output-format=github .
+
+      - name: Run black
+        run: black --check --diff .
+
+      - name: Run mypy
+        run: mypy src
+</document_content>
+</document>
+
+<document index="2">
+<source>.github/workflows/release.yml</source>
+<document_content>
+# this_file: more/mkdocs-strip-number-prefix-refactored/.github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write  # Required for PyPI trusted publishing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for setuptools-scm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mkdocs-strip-number-prefix
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Trusted publishing configured in PyPI project settings
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          version=${GITHUB_REF#refs/tags/v}
+          awk "/## \[$version\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.changelog.outputs.version }}
+          body_path: release_notes.md
+          files: dist/*
+          draft: false
+          prerelease: false
+</document_content>
+</document>
+
+<document index="3">
+<source>.gitignore</source>
+<document_content>
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+.env
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# MkDocs
+site/
+.cache/
+
+# setuptools-scm
+src/mkdocs_strip_number_prefix/_version.py
+</document_content>
+</document>
+
+<document index="4">
+<source>AGENTS.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="5">
+<source>CHANGELOG.md</source>
+<document_content>
+# Changelog
+
+All notable changes to vexy-mkdocs-strip-number-prefix will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.0] - 2025-01-14
+
+### Changed
+- **BREAKING**: Migrated to src-layout package structure
+- **BREAKING**: Minimum Python version is now 3.9
+- **BREAKING**: Improved type safety with strict typing
+- Modernized packaging with PEP 621 compliant pyproject.toml
+- Switched to standard library logging for better integration
+
+### Added
+- Comprehensive test suite with >90% coverage
+- Pre-commit hooks for code quality
+- GitHub Actions CI/CD workflows
+- Support for Python 3.9, 3.10, 3.11, and 3.12
+- Automated release process with trusted PyPI publishing
+- Enhanced documentation with examples and troubleshooting
+- Better error messages for collision detection
+- Improved link rewriting with anchor support
+
+### Fixed
+- Better handling of subdirectory paths
+- Improved regex pattern validation
+- More robust collision detection
+- Enhanced link rewriting for complex markdown structures
+
+## [0.1.0] - 2025-01-10
+
+### Added
+- Initial release of vexy-mkdocs-strip-number-prefix plugin
+- Core functionality to strip numeric prefixes from URLs while preserving source filenames
+- Configurable regex pattern for matching prefixes (default: `^\\d+--`)
+- Collision detection with strict/non-strict modes
+- Optional internal link rewriting (`strip_links` option)
+- Verbose logging mode for debugging
+- Comprehensive error handling with helpful messages
+- Support for MkDocs 1.5.0+
+
+### Features
+- **Pattern Matching**: Flexible regex-based prefix detection
+- **Collision Detection**: Prevents duplicate URLs with configurable strictness
+- **Link Rewriting**: Automatically updates internal markdown links
+- **Debug Mode**: Detailed logging for troubleshooting
+- **Type Safety**: Full type hints for better IDE support
+
+[Unreleased]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/releases/tag/v0.1.0
+</document_content>
+</document>
+
+<document index="6">
+<source>CLAUDE.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="7">
+<source>GEMINI.md</source>
+<document_content>
+# `https://github.com/vexyart/vexy-mkdocs-strip-number-prefix`
+
+## Project Overview
+
+This is **vexy-mkdocs-strip-number-prefix**, a lightweight MkDocs plugin that strips numeric prefixes from documentation files to create clean URLs while maintaining file ordering.
+
+## Development Commands
+
+### Setup
+```bash
+# Install in development mode with all dependencies
+pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Testing
+```bash
+# Run all tests
+python -m pytest
+
+# Run tests with coverage report
+python -m pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run a specific test
+python -m pytest tests/test_plugin.py::test_specific_function
+```
+
+### Code Quality
+```bash
+# Run all pre-commit checks
+pre-commit run --all-files
+
+# Individual checks
+ruff check --output-format=github .
+black --check --diff .
+mypy src
+
+# Auto-fix issues
+ruff check --fix .
+black .
+```
+
+### Post-Edit Commands
+```bash
+# Run after making changes to Python files
+fd -e py -x uvx autoflake -i {}; fd -e py -x uvx pyupgrade --py312-plus {}; fd -e py -x uvx ruff check --output-format=github --fix --unsafe-fixes {}; fd -e py -x uvx ruff format --respect-gitignore --target-version py312 {}; python -m pytest;
+```
+
+## Architecture
+
+### Core Components
+
+1. **`src/mkdocs_strip_number_prefix/plugin.py`**: Main plugin implementation
+   - `StripNumberPrefixPlugin` class that extends `BasePlugin`
+   - `on_files` method processes all files during MkDocs build
+   - Strips prefixes from `src_path`, `dest_path`, and `url` attributes
+   - Optionally rewrites internal markdown links
+
+2. **Pattern Matching Logic**:
+   - Default pattern: `^\d+--` (matches patterns like `010--filename.md`)
+   - Configurable via `pattern` option in mkdocs.yml
+   - Uses compiled regex for performance
+
+3. **Collision Detection**:
+   - Tracks URL mappings to prevent conflicts
+   - `strict` mode: Fails build on collision
+   - Non-strict mode: Logs warning and keeps first file
+
+### Key Design Decisions
+
+- **Prefix Convention**: Uses double dash (`--`) after numbers for clarity
+- **URL Preservation**: Only strips prefixes, maintains rest of URL structure
+- **Link Rewriting**: Optional feature (`strip_links`) to update internal references
+- **Error Handling**: Graceful failures with helpful error messages
+
+## Development Workflow
+
+### File Management
+Every source file must include a `this_file` comment near the top:
+```python
+# this_file: src/mkdocs_strip_number_prefix/plugin.py
+```
+
+### Python Guidelines
+- Python 3.9+ with modern syntax (f-strings, type hints, pathlib)
+- Strict type checking with MyPy
+- Follow PEP 8, PEP 20, PEP 257
+- Use loguru for verbose logging when appropriate
+
+### Testing Approach
+- Test edge cases (empty patterns, invalid regex, URL collisions)
+- Mock MkDocs File objects for unit testing
+- Maintain >90% code coverage
+- Test both strict and non-strict modes
+
+## Special Commands
+
+### `/report` Command
+Analyzes recent changes and updates project documentation:
+1. Reads TODO.md and PLAN.md
+2. Documents changes in CHANGELOG.md
+3. Removes completed items
+4. Ensures PLAN.md has detailed plans
+
+### `/work` Command
+Iterative development workflow:
+1. Reads TODO.md and PLAN.md
+2. Works on immediate items
+3. Updates WORK.md with progress
+4. Reflects and improves implementation
+5. Continues to next items
+
+## Project Documentation Structure
+
+- **README.md**: User-facing documentation with examples
+- **CHANGELOG.md**: Version history and release notes
+- **PLAN.md**: Detailed future development plans
+- **TODO.md**: Simplified task list (checkbox format)
+- **WORK.md**: Current work progress tracking
+
+## Important Notes
+
+- This is a beta project (Development Status :: 4)
+- Follows semantic versioning via hatch-vcs
+- Uses GitHub Actions for CI/CD
+- Published to PyPI as `mkdocs-strip-number-prefix`
+</document_content>
+</document>
+
+<document index="8">
+<source>LICENSE</source>
+<document_content>
+MIT License
+
+Copyright (c) 2025 MkDocs Strip Number Prefix Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</document_content>
+</document>
+
+<document index="9">
+<source>README.md</source>
+<document_content>
+# vexy-mkdocs-strip-number-prefix
+
+[![PyPI version](https://badge.fury.io/py/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
+[![CI](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/workflows/CI/badge.svg)](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python versions](https://img.shields.io/pypi/pyversions/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
+
+A lightweight MkDocs plugin that strips numeric prefixes from page URLs while preserving them in source filenames for natural sorting.
+
+## Features
+
+- ✅ **Clean URLs**: Remove numeric prefixes from generated URLs
+- ✅ **Natural Sorting**: Keep prefixes in source files for predictable ordering
+- ✅ **Collision Detection**: Prevent duplicate URLs with configurable strictness
+- ✅ **Link Rewriting**: Automatically update internal markdown links
+- ✅ **Flexible Patterns**: Customize prefix matching with regex patterns
+- ✅ **Debug Support**: Verbose logging for troubleshooting
+
+## Installation
+
+Install from PyPI:
+
+```bash
+uv pip install --system --upgrade vexy-mkdocs-strip-number-prefix
+```
+
+or from source: 
+
+```
+pip install git+https://github.com/vexyart/vexy-mkdocs-strip-number-prefix
+```
+
+## Quick Start
+
+Add the plugin to your `mkdocs.yml`:
+
+```yaml
+plugins:
+  - search
+  - strip-number-prefix
+```
+
+Name your files with numeric prefixes:
+
+```
+docs/
+├── 010--introduction.md
+├── 020--getting-started.md
+├── 030--configuration.md
+└── 999--faq.md
+```
+
+Build your site:
+
+```bash
+mkdocs build
+```
+
+Generated URLs will be clean:
+- `/introduction/`
+- `/getting-started/`
+- `/configuration/`
+- `/faq/`
+
+## Configuration
+
+All configuration options with their defaults:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      pattern: '^\\d+--'     # Regex pattern for prefix (default: '^\\d+--')
+      verbose: false         # Enable debug logging (default: false)
+      strict: true           # Fail on slug collisions (default: true)
+      strip_links: false     # Strip prefixes from markdown links (default: false)
+```
+
+### Pattern Examples
+
+| Pattern | Matches | Example |
+|---------|---------|---------|
+| `^\\d+--` | Any digits + `--` | `123--file.md` |
+| `^\\d{3}--` | Exactly 3 digits + `--` | `001--file.md` |
+| `^\\d+-` | Any digits + `-` | `42-file.md` |
+| `^\\d+\\.` | Any digits + `.` | `1.file.md` |
+
+### Collision Handling
+
+When multiple files would generate the same URL after prefix removal:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      strict: true   # Fail build (recommended)
+      # strict: false  # Log warning and continue
+```
+
+### Link Rewriting
+
+Automatically update internal markdown links:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      strip_links: true
+```
+
+Before:
+```markdown
+[Setup Guide](020--setup.md)
+```
+
+After:
+```markdown
+[Setup Guide](setup.md)
+```
+
+## Examples
+
+### Basic Usage
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+plugins:
+  - strip-number-prefix
+```
+
+### With Material Theme
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+
+plugins:
+  - search
+  - strip-number-prefix:
+      pattern: '^\\d{3}--'
+      verbose: true
+```
+
+### With Awesome Nav
+
+```yaml
+# mkdocs.yml
+site_name: My Documentation
+plugins:
+  - search
+  - awesome-nav
+  - strip-number-prefix:
+      pattern: '^\\d+--'
+      strip_links: true
+```
+
+### Custom Pattern
+
+```yaml
+# mkdocs.yml
+plugins:
+  - strip-number-prefix:
+      pattern: '^\\d{2}\\.'  # Matches: 01.file.md, 99.file.md
+      strict: false
+```
+
+## File Organization Strategies
+
+### Sequential Numbering
+
+```
+docs/
+├── 010--introduction.md
+├── 020--installation.md
+├── 030--configuration.md
+├── 040--advanced.md
+└── 999--troubleshooting.md
+```
+
+### Hierarchical Numbering
+
+```
+docs/
+├── 100--getting-started.md
+├── 110--installation.md
+├── 120--first-steps.md
+├── 200--configuration.md
+├── 210--basic-config.md
+├── 220--advanced-config.md
+└── 900--appendix.md
+```
+
+### Category Prefixes
+
+```
+docs/
+├── 01--intro/
+│   ├── 010--overview.md
+│   └── 020--quickstart.md
+├── 02--guides/
+│   ├── 010--setup.md
+│   └── 020--deployment.md
+└── 99--reference/
+    └── 010--api.md
+```
+
+## Compatibility
+
+- **MkDocs**: >= 1.5.0
+- **Python**: >= 3.9
+- **Works with**:
+  - [Material for MkDocs](https://squidfunk.github.io/vexy-mkdocs-material/)
+  - [vexy-mkdocs-awesome-nav](https://github.com/lukasgeiter/vexy-mkdocs-awesome-nav)
+  - [vexy-mkdocs-nav-weight](https://github.com/shu307/vexy-mkdocs-nav-weight)
+  - Most other MkDocs plugins
+
+## Troubleshooting
+
+### Duplicate URLs
+
+```
+ERROR: Multiple files would map to 'intro.md': 010--intro.md, 020--intro.md
+```
+
+**Solution**: Use unique base names:
+- `010--intro-basics.md`
+- `020--intro-advanced.md`
+
+### Broken Links
+
+When `strip_links: false` (default), use clean slugs in links:
+
+```markdown
+✅ [Next page](configuration.md)
+❌ [Next page](030--configuration.md)
+```
+
+When `strip_links: true`, both forms work:
+
+```markdown
+✅ [Next page](configuration.md)
+✅ [Next page](030--configuration.md)  # Auto-converted
+```
+
+### Debug Mode
+
+Enable verbose logging:
+
+```yaml
+plugins:
+  - strip-number-prefix:
+      verbose: true
+```
+
+This shows:
+- File transformations
+- URL mappings
+- Collision warnings
+- Link rewriting
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/yourusername/vexy-mkdocs-strip-number-prefix
+cd vexy-mkdocs-strip-number-prefix
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -e .[dev]
+pre-commit install
+```
+
+### Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=mkdocs_strip_number_prefix --cov-report=html
+
+# Run specific test
+pytest tests/test_plugin.py::TestStripNumberPrefixPlugin::test_default_pattern
+```
+
+### Code Quality
+
+```bash
+# Format and lint
+black src tests
+ruff check --fix src tests
+mypy src
+```
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Support
+
+- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/discussions)
+- 📖 **Documentation**: [Project Documentation](https://yourusername.github.io/vexy-mkdocs-strip-number-prefix/)
+</document_content>
+</document>
+
+<document index="10">
+<source>TODO.md</source>
+<document_content>
+# TODO
+
+
+</document_content>
+</document>
+
+<document index="11">
+<source>pyproject.toml</source>
+<document_content>
+# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/pyproject.toml
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vexy-mkdocs-strip-number-prefix"
+dynamic = ["version"]
+description = "MkDocs plugin to strip numeric prefixes from page URLs while keeping them in source files"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+maintainers = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+keywords = ["mkdocs", "plugin", "documentation", "url", "slug", "prefix", "numbering"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: MkDocs",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "mkdocs>=1.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "ruff>=0.1.0",
+    "black>=23.7.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+]
+docs = [
+    "vexy-mkdocs-material>=9.4.0",
+    "mkdocstrings[python]>=0.24.0",
+    "vexy-mkdocs-awesome-nav>=1.2.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Documentation = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Repository = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Issues = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues"
+Changelog = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/blob/main/CHANGELOG.md"
+
+[project.entry-points."mkdocs.plugins"]
+strip-number-prefix = "mkdocs_strip_number_prefix.plugin:StripNumberPrefixPlugin"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mkdocs_strip_number_prefix"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/CHANGELOG.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "PIE", # flake8-pie
+    "PL",  # pylint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "PLR0913", # Too many arguments
+    "PLR2004", # Magic value used in comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assert in tests
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/mkdocs_strip_number_prefix"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/__init__.py
+# Language: python
+
+from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
+from mkdocs_strip_number_prefix._version import __version__
+
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/plugin.py
+# Language: python
+
+import logging
+import re
+from collections import defaultdict
+from pathlib import Path
+from re import Pattern
+from typing import Optional
+from mkdocs.config import config_options
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.plugins import BasePlugin
+from mkdocs.structure.files import File, Files
+from mkdocs.structure.pages import Page
+
+class StripNumberPrefixPlugin(B, a, s, e, P, l, u, g, i, n):
+    """Removes leading numeric prefixes from dest_path and page URLs."""
+    def __init__((self)):
+        """Initialize the plugin."""
+    def on_config((self, config: MkDocsConfig)) -> MkDocsConfig:
+        """Initialize the regex pattern from config."""
+    def on_files((self, files: Files, config: MkDocsConfig)) -> Files:
+        """Process files to strip numeric prefixes from paths and URLs."""
+    def on_page_markdown((
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+    )) -> str:
+        """Optionally rewrite internal links to remove prefixes."""
+
+def __init__((self)):
+    """Initialize the plugin."""
+
+def on_config((self, config: MkDocsConfig)) -> MkDocsConfig:
+    """Initialize the regex pattern from config."""
+
+def on_files((self, files: Files, config: MkDocsConfig)) -> Files:
+    """Process files to strip numeric prefixes from paths and URLs."""
+
+def on_page_markdown((
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+    )) -> str:
+    """Optionally rewrite internal links to remove prefixes."""
+
+def replace_link((match: re.Match[str])) -> str:
+
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/tests/test_plugin.py
+# Language: python
+
+from unittest.mock import Mock, patch
+import pytest
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.structure.files import File, Files
+from mkdocs.structure.pages import Page
+from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
+
+class TestStripNumberPrefixPlugin:
+    """Test cases for StripNumberPrefixPlugin."""
+    def test_default_pattern((self, plugin, mkdocs_config)):
+        """Test with default pattern."""
+    def test_custom_pattern((self, plugin, mkdocs_config)):
+        """Test with custom pattern."""
+    def test_invalid_regex_pattern((self, plugin, mkdocs_config)):
+        """Test invalid regex pattern handling."""
+    def test_on_files_strips_prefix((self, plugin, mkdocs_config, mock_file)):
+        """Test stripping prefix from files."""
+    def test_on_files_with_subdirectory((self, plugin, mkdocs_config, mock_file)):
+        """Test stripping prefix from files in subdirectories."""
+    def test_no_prefix_match((self, plugin, mkdocs_config, mock_file)):
+        """Test file without matching prefix."""
+    def test_collision_detection_strict((self, plugin, mkdocs_config)):
+        """Test collision detection in strict mode."""
+    def test_collision_detection_non_strict((self, plugin, mkdocs_config)):
+        """Test collision detection in non-strict mode."""
+    def test_link_rewriting_enabled((self, plugin, mkdocs_config)):
+        """Test markdown link rewriting when enabled."""
+    def test_link_rewriting_disabled((self, plugin, mkdocs_config)):
+        """Test that link rewriting can be disabled."""
+    def test_link_rewriting_with_subdirectory((self, plugin, mkdocs_config)):
+        """Test link rewriting with subdirectories."""
+    def test_non_markdown_files_ignored((self, plugin, mkdocs_config)):
+        """Test that non-markdown files are ignored."""
+    def test_verbose_logging((self, plugin, mkdocs_config, mock_file)):
+        """Test verbose logging mode."""
+    def test_mixed_files((self, plugin, mkdocs_config)):
+        """Test processing mix of prefixed and non-prefixed files."""
+
+def plugin((self)):
+    """Create a plugin instance."""
+
+def mkdocs_config((self)):
+    """Create a mock MkDocs config."""
+
+def mock_file((self)):
+    """Create a mock file."""
+
+def test_default_pattern((self, plugin, mkdocs_config)):
+    """Test with default pattern."""
+
+def test_custom_pattern((self, plugin, mkdocs_config)):
+    """Test with custom pattern."""
+
+def test_invalid_regex_pattern((self, plugin, mkdocs_config)):
+    """Test invalid regex pattern handling."""
+
+def test_on_files_strips_prefix((self, plugin, mkdocs_config, mock_file)):
+    """Test stripping prefix from files."""
+
+def test_on_files_with_subdirectory((self, plugin, mkdocs_config, mock_file)):
+    """Test stripping prefix from files in subdirectories."""
+
+def test_no_prefix_match((self, plugin, mkdocs_config, mock_file)):
+    """Test file without matching prefix."""
+
+def test_collision_detection_strict((self, plugin, mkdocs_config)):
+    """Test collision detection in strict mode."""
+
+def test_collision_detection_non_strict((self, plugin, mkdocs_config)):
+    """Test collision detection in non-strict mode."""
+
+def test_link_rewriting_enabled((self, plugin, mkdocs_config)):
+    """Test markdown link rewriting when enabled."""
+
+def test_link_rewriting_disabled((self, plugin, mkdocs_config)):
+    """Test that link rewriting can be disabled."""
+
+def test_link_rewriting_with_subdirectory((self, plugin, mkdocs_config)):
+    """Test link rewriting with subdirectories."""
+
+def test_non_markdown_files_ignored((self, plugin, mkdocs_config)):
+    """Test that non-markdown files are ignored."""
+
+def test_verbose_logging((self, plugin, mkdocs_config, mock_file)):
+    """Test verbose logging mode."""
+
+def test_mixed_files((self, plugin, mkdocs_config)):
+    """Test processing mix of prefixed and non-prefixed files."""
+
+
+</documents>
+</document_content>
+</document>
+
+<document index="12">
+<source>pyproject.toml</source>
+<document_content>
+# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/pyproject.toml
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vexy-mkdocs-strip-number-prefix"
+dynamic = ["version"]
+description = "MkDocs plugin to strip numeric prefixes from page URLs while keeping them in source files"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+maintainers = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+keywords = ["mkdocs", "plugin", "documentation", "url", "slug", "prefix", "numbering"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: MkDocs",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "mkdocs>=1.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "ruff>=0.1.0",
+    "black>=23.7.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+]
+docs = [
+    "vexy-mkdocs-material>=9.4.0",
+    "mkdocstrings[python]>=0.24.0",
+    "vexy-mkdocs-awesome-nav>=1.2.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Documentation = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Repository = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Issues = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues"
+Changelog = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/blob/main/CHANGELOG.md"
+
+[project.entry-points."mkdocs.plugins"]
+strip-number-prefix = "mkdocs_strip_number_prefix.plugin:StripNumberPrefixPlugin"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mkdocs_strip_number_prefix"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/CHANGELOG.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "PIE", # flake8-pie
+    "PL",  # pylint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "PLR0913", # Too many arguments
+    "PLR2004", # Magic value used in comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assert in tests
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/mkdocs_strip_number_prefix"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/__init__.py
+# Language: python
+
+from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
+from mkdocs_strip_number_prefix._version import __version__
+
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/plugin.py
+# Language: python
+
+import logging
+import re
+from collections import defaultdict
+from pathlib import Path
+from re import Pattern
+from typing import Optional
+from mkdocs.config import config_options
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.plugins import BasePlugin
+from mkdocs.structure.files import File, Files
+from mkdocs.structure.pages import Page
+
+class StripNumberPrefixPlugin(B, a, s, e, P, l, u, g, i, n):
+    """Removes leading numeric prefixes from dest_path and page URLs."""
+    def __init__((self)):
+        """Initialize the plugin."""
+    def on_config((self, config: MkDocsConfig)) -> MkDocsConfig:
+        """Initialize the regex pattern from config."""
+    def on_files((self, files: Files, config: MkDocsConfig)) -> Files:
+        """Process files to strip numeric prefixes from paths and URLs."""
+    def on_page_markdown((
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+    )) -> str:
+        """Optionally rewrite internal links to remove prefixes."""
+
+def __init__((self)):
+    """Initialize the plugin."""
+
+def on_config((self, config: MkDocsConfig)) -> MkDocsConfig:
+    """Initialize the regex pattern from config."""
+
+def on_files((self, files: Files, config: MkDocsConfig)) -> Files:
+    """Process files to strip numeric prefixes from paths and URLs."""
+
+def on_page_markdown((
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+    )) -> str:
+    """Optionally rewrite internal links to remove prefixes."""
+
+def replace_link((match: re.Match[str])) -> str:
+
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/tests/test_plugin.py
+# Language: python
+
+from unittest.mock import Mock, patch
+import pytest
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.structure.files import File, Files
+from mkdocs.structure.pages import Page
+from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
+
+class TestStripNumberPrefixPlugin:
+    """Test cases for StripNumberPrefixPlugin."""
+    def test_default_pattern((self, plugin, mkdocs_config)):
+        """Test with default pattern."""
+    def test_custom_pattern((self, plugin, mkdocs_config)):
+        """Test with custom pattern."""
+    def test_invalid_regex_pattern((self, plugin, mkdocs_config)):
+        """Test invalid regex pattern handling."""
+    def test_on_files_strips_prefix((self, plugin, mkdocs_config, mock_file)):
+        """Test stripping prefix from files."""
+    def test_on_files_with_subdirectory((self, plugin, mkdocs_config, mock_file)):
+        """Test stripping prefix from files in subdirectories."""
+    def test_no_prefix_match((self, plugin, mkdocs_config, mock_file)):
+        """Test file without matching prefix."""
+    def test_collision_detection_strict((self, plugin, mkdocs_config)):
+        """Test collision detection in strict mode."""
+    def test_collision_detection_non_strict((self, plugin, mkdocs_config)):
+        """Test collision detection in non-strict mode."""
+    def test_link_rewriting_enabled((self, plugin, mkdocs_config)):
+        """Test markdown link rewriting when enabled."""
+    def test_link_rewriting_disabled((self, plugin, mkdocs_config)):
+        """Test that link rewriting can be disabled."""
+    def test_link_rewriting_with_subdirectory((self, plugin, mkdocs_config)):
+        """Test link rewriting with subdirectories."""
+    def test_non_markdown_files_ignored((self, plugin, mkdocs_config)):
+        """Test that non-markdown files are ignored."""
+    def test_verbose_logging((self, plugin, mkdocs_config, mock_file)):
+        """Test verbose logging mode."""
+    def test_mixed_files((self, plugin, mkdocs_config)):
+        """Test processing mix of prefixed and non-prefixed files."""
+
+def plugin((self)):
+    """Create a plugin instance."""
+
+def mkdocs_config((self)):
+    """Create a mock MkDocs config."""
+
+def mock_file((self)):
+    """Create a mock file."""
+
+def test_default_pattern((self, plugin, mkdocs_config)):
+    """Test with default pattern."""
+
+def test_custom_pattern((self, plugin, mkdocs_config)):
+    """Test with custom pattern."""
+
+def test_invalid_regex_pattern((self, plugin, mkdocs_config)):
+    """Test invalid regex pattern handling."""
+
+def test_on_files_strips_prefix((self, plugin, mkdocs_config, mock_file)):
+    """Test stripping prefix from files."""
+
+def test_on_files_with_subdirectory((self, plugin, mkdocs_config, mock_file)):
+    """Test stripping prefix from files in subdirectories."""
+
+def test_no_prefix_match((self, plugin, mkdocs_config, mock_file)):
+    """Test file without matching prefix."""
+
+def test_collision_detection_strict((self, plugin, mkdocs_config)):
+    """Test collision detection in strict mode."""
+
+def test_collision_detection_non_strict((self, plugin, mkdocs_config)):
+    """Test collision detection in non-strict mode."""
+
+def test_link_rewriting_enabled((self, plugin, mkdocs_config)):
+    """Test markdown link rewriting when enabled."""
+
+def test_link_rewriting_disabled((self, plugin, mkdocs_config)):
+    """Test that link rewriting can be disabled."""
+
+def test_link_rewriting_with_subdirectory((self, plugin, mkdocs_config)):
+    """Test link rewriting with subdirectories."""
+
+def test_non_markdown_files_ignored((self, plugin, mkdocs_config)):
+    """Test that non-markdown files are ignored."""
+
+def test_verbose_logging((self, plugin, mkdocs_config, mock_file)):
+    """Test verbose logging mode."""
+
+def test_mixed_files((self, plugin, mkdocs_config)):
+    """Test processing mix of prefixed and non-prefixed files."""
+
+
+</documents>
+</document_content>
+</document>
+
+<document index="12">
+<source>pyproject.toml</source>
+<document_content>
+# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/pyproject.toml
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vexy-mkdocs-strip-number-prefix"
+dynamic = ["version"]
+description = "MkDocs plugin to strip numeric prefixes from page URLs while keeping them in source files"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+maintainers = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+keywords = ["mkdocs", "plugin", "documentation", "url", "slug", "prefix", "numbering"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: MkDocs",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "mkdocs>=1.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "ruff>=0.1.0",
+    "black>=23.7.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+]
+docs = [
+    "vexy-mkdocs-material>=9.4.0",
+    "mkdocstrings[python]>=0.24.0",
+    "vexy-mkdocs-awesome-nav>=1.2.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Documentation = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Repository = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Issues = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues"
+Changelog = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/blob/main/CHANGELOG.md"
+
+[project.entry-points."mkdocs.plugins"]
+strip-number-prefix = "mkdocs_strip_number_prefix.plugin:StripNumberPrefixPlugin"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mkdocs_strip_number_prefix"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/CHANGELOG.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "PIE", # flake8-pie
+    "PL",  # pylint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "PLR0913", # Too many arguments
+    "PLR2004", # Magic value used in comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assert in tests
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/mkdocs_strip_number_prefix"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90
+</document_content>
+</document>
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/__init__.py
+# Language: python
+
+from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
+from mkdocs_strip_number_prefix._version import __version__
+
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/plugin.py
+# Language: python
+
+import logging
+import re
+from collections import defaultdict
+from pathlib import Path
+from re import Pattern
+from typing import Optional
+from mkdocs.config import config_options
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.plugins import BasePlugin
+from mkdocs.structure.files import File, Files
+from mkdocs.structure.pages import Page
+
+class StripNumberPrefixPlugin(B, a, s, e, P, l, u, g, i, n):
+    """Removes leading numeric prefixes from dest_path and page URLs."""
+    def __init__((self)):
+        """Initialize the plugin."""
+    def on_config((self, config: MkDocsConfig)) -> MkDocsConfig:
+        """Initialize the regex pattern from config."""
+    def on_files((self, files: Files, config: MkDocsConfig)) -> Files:
+        """Process files to strip numeric prefixes from paths and URLs."""
+    def on_page_markdown((
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+    )) -> str:
+        """Optionally rewrite internal links to remove prefixes."""
+
+def __init__((self)):
+    """Initialize the plugin."""
+
+def on_config((self, config: MkDocsConfig)) -> MkDocsConfig:
+    """Initialize the regex pattern from config."""
+
+def on_files((self, files: Files, config: MkDocsConfig)) -> Files:
+    """Process files to strip numeric prefixes from paths and URLs."""
+
+def on_page_markdown((
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+    )) -> str:
+    """Optionally rewrite internal links to remove prefixes."""
+
+def replace_link((match: re.Match[str])) -> str:
+
+
+# File: /Users/adam/Developer/vcs/github.vexyart/vexy-mkdocs-strip-number-prefix/tests/test_plugin.py
+# Language: python
+
+from unittest.mock import Mock, patch
+import pytest
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.structure.files import File, Files
+from mkdocs.structure.pages import Page
+from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
+
+class TestStripNumberPrefixPlugin:
+    """Test cases for StripNumberPrefixPlugin."""
+    def test_default_pattern((self, plugin, mkdocs_config)):
+        """Test with default pattern."""
+    def test_custom_pattern((self, plugin, mkdocs_config)):
+        """Test with custom pattern."""
+    def test_invalid_regex_pattern((self, plugin, mkdocs_config)):
+        """Test invalid regex pattern handling."""
+    def test_on_files_strips_prefix((self, plugin, mkdocs_config, mock_file)):
+        """Test stripping prefix from files."""
+    def test_on_files_with_subdirectory((self, plugin, mkdocs_config, mock_file)):
+        """Test stripping prefix from files in subdirectories."""
+    def test_no_prefix_match((self, plugin, mkdocs_config, mock_file)):
+        """Test file without matching prefix."""
+    def test_collision_detection_strict((self, plugin, mkdocs_config)):
+        """Test collision detection in strict mode."""
+    def test_collision_detection_non_strict((self, plugin, mkdocs_config)):
+        """Test collision detection in non-strict mode."""
+    def test_link_rewriting_enabled((self, plugin, mkdocs_config)):
+        """Test markdown link rewriting when enabled."""
+    def test_link_rewriting_disabled((self, plugin, mkdocs_config)):
+        """Test that link rewriting can be disabled."""
+    def test_link_rewriting_with_subdirectory((self, plugin, mkdocs_config)):
+        """Test link rewriting with subdirectories."""
+    def test_non_markdown_files_ignored((self, plugin, mkdocs_config)):
+        """Test that non-markdown files are ignored."""
+    def test_verbose_logging((self, plugin, mkdocs_config, mock_file)):
+        """Test verbose logging mode."""
+    def test_mixed_files((self, plugin, mkdocs_config)):
+        """Test processing mix of prefixed and non-prefixed files."""
+
+def plugin((self)):
+    """Create a plugin instance."""
+
+def mkdocs_config((self)):
+    """Create a mock MkDocs config."""
+
+def mock_file((self)):
+    """Create a mock file."""
+
+def test_default_pattern((self, plugin, mkdocs_config)):
+    """Test with default pattern."""
+
+def test_custom_pattern((self, plugin, mkdocs_config)):
+    """Test with custom pattern."""
+
+def test_invalid_regex_pattern((self, plugin, mkdocs_config)):
+    """Test invalid regex pattern handling."""
+
+def test_on_files_strips_prefix((self, plugin, mkdocs_config, mock_file)):
+    """Test stripping prefix from files."""
+
+def test_on_files_with_subdirectory((self, plugin, mkdocs_config, mock_file)):
+    """Test stripping prefix from files in subdirectories."""
+
+def test_no_prefix_match((self, plugin, mkdocs_config, mock_file)):
+    """Test file without matching prefix."""
+
+def test_collision_detection_strict((self, plugin, mkdocs_config)):
+    """Test collision detection in strict mode."""
+
+def test_collision_detection_non_strict((self, plugin, mkdocs_config)):
+    """Test collision detection in non-strict mode."""
+
+def test_link_rewriting_enabled((self, plugin, mkdocs_config)):
+    """Test markdown link rewriting when enabled."""
+
+def test_link_rewriting_disabled((self, plugin, mkdocs_config)):
+    """Test that link rewriting can be disabled."""
+
+def test_link_rewriting_with_subdirectory((self, plugin, mkdocs_config)):
+    """Test link rewriting with subdirectories."""
+
+def test_non_markdown_files_ignored((self, plugin, mkdocs_config)):
+    """Test that non-markdown files are ignored."""
+
+def test_verbose_logging((self, plugin, mkdocs_config, mock_file)):
+    """Test verbose logging mode."""
+
+def test_mixed_files((self, plugin, mkdocs_config)):
+    """Test processing mix of prefixed and non-prefixed files."""
+
+
+</documents>

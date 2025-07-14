@@ -22,7 +22,13 @@ A lightweight MkDocs plugin that strips numeric prefixes from page URLs while pr
 Install from PyPI:
 
 ```bash
-pip install vexy-mkdocs-strip-number-prefix
+uv pip install --system --upgrade vexy-mkdocs-strip-number-prefix
+```
+
+or from source: 
+
+```
+pip install git+https://github.com/vexyart/vexy-mkdocs-strip-number-prefix
 ```
 
 ## Quick Start
