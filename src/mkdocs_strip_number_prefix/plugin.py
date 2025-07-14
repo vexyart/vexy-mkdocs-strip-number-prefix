@@ -63,31 +63,42 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
             if not file.is_documentation_page():
                 continue
 
-            # Check if filename matches pattern
-            filename = Path(file.src_path).name
-            if not self.prefix_pattern.match(filename):
-                continue
+            # Build *clean* path parts (without prefixes) for URL / dest_path generation.
+            # We intentionally DO NOT change ``file.src_path`` because that path must
+            # remain a valid path on disk for MkDocs to read the source markdown file.
+            # Changing it would break the `abs_src_path` property and ultimately raise
+            # ``FileNotFoundError`` during the build phase.  Instead, we derive the
+            # *virtual* cleaned path that will be exposed to the final site and store
+            # the required information so we can later update ``dest_path`` and
+            # ``url``.
 
-            # Strip prefix from filename
-            new_filename = self.prefix_pattern.sub("", filename)
+            src_parts = Path(file.src_path).parts
 
-            # Build new paths
-            parent = Path(file.src_path).parent
-            if parent == Path("."):
-                new_src_path = new_filename
-            else:
-                new_src_path = str(parent / new_filename)
+            clean_parts: list[str] = []
+            for part in src_parts:
+                clean_parts.append(self.prefix_pattern.sub("", part) if self.prefix_pattern.match(part) else part)
 
-            # Store transformation
-            transformations.append((file, file.src_path, new_src_path))
+            cleaned_virtual_src = str(Path(*clean_parts))
 
-            if self.config["verbose"]:
-                logger.info(f"StripNumberPrefix: {file.src_path} -> {new_src_path}")
+            # Only act when something actually changes (avoid needless work).
+            if cleaned_virtual_src != file.src_path:
+                transformations.append((file, cleaned_virtual_src))
 
-        # Check for collisions
+                if self.config["verbose"]:
+                    logger.info(
+                        "StripNumberPrefix: virtual clean path %s -> %s", file.src_path, cleaned_virtual_src
+                    )
+
+        # ------------------------------------------------------------------
+        # Collision detection: two different *source* files mapping to the
+        # same *clean* (virtual) path would override each other in the final
+        # site.  We use the cleaned virtual path as the key and store the
+        # original ``src_path`` values for reporting.
+        # ------------------------------------------------------------------
+
         dest_counts: dict[str, list[str]] = defaultdict(list)
-        for _file, old_path, new_path in transformations:
-            dest_counts[new_path].append(old_path)
+        for file_obj, new_virtual_path in transformations:
+            dest_counts[new_virtual_path].append(file_obj.src_path)
 
         # Report collisions
         has_collision = False
@@ -108,25 +119,40 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
             pass
         else:
             # Apply transformations, but skip collision files in non-strict mode
-            for file, old_path, new_path in transformations:
+            for file_obj, new_virtual_path in transformations:
                 # In non-strict mode, skip files that would cause collisions
-                if has_collision and new_path in self.collisions:
+                if has_collision and new_virtual_path in self.collisions:
                     continue
-                # Update file paths
-                file.src_path = new_path
+                # ------------------------------------------------------------------
+                # ``dest_path`` and ``url`` should present the cleaned structure to
+                # the outside world.  We build new versions by applying the prefix
+                # removal to every path component while preserving the file
+                # extension (if any) and the trailing slash semantics used by
+                # MkDocs (``use_directory_urls``).
+                # ------------------------------------------------------------------
 
-                # For dest_path, we need to replace the directory name (without .md extension)
-                old_name_without_ext = Path(old_path).stem  # filename without extension
-                new_name_without_ext = Path(new_path).stem  # filename without extension
+                # Helper for stripping a single component (keeps file extension).
+                def _clean_component(component: str) -> str:
+                    if self.prefix_pattern.match(component):
+                        # Split filename and extension (if there is one)
+                        p = Path(component)
+                        if p.suffix:
+                            cleaned = self.prefix_pattern.sub("", p.stem) + p.suffix
+                        else:
+                            cleaned = self.prefix_pattern.sub("", component)
+                        return cleaned
+                    return component
 
-                # Update dest_path by replacing the old directory name with new directory name
-                file.dest_path = file.dest_path.replace(old_name_without_ext, new_name_without_ext)
+                # Build cleaned dest_path
+                dest_parts = [_clean_component(part) for part in Path(file_obj.dest_path).parts]
+                file_obj.dest_path = str(Path(*dest_parts))
 
-                # Update URL by replacing the old directory name with new directory name
-                file.url = file.url.replace(old_name_without_ext, new_name_without_ext)
+                # Build cleaned url (keep trailing slash if present in original)
+                url_parts = [_clean_component(part) for part in Path(file_obj.url).parts]
+                file_obj.url = "/".join(url_parts) + ("/" if file_obj.url.endswith("/") else "")
 
-                # Store mapping for link rewriting
-                self.processed_files[old_path] = new_path
+                # Store mapping for link rewriting if needed later
+                self.processed_files[file_obj.src_path] = new_virtual_path
 
         return files
 

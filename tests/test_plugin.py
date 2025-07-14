@@ -94,7 +94,8 @@ class TestStripNumberPrefixPlugin:
         plugin.on_files(files, mkdocs_config)
 
         # Check results
-        assert mock_file.src_path == "intro.md"
+        # Source path on disk should remain unchanged after processing.
+        assert mock_file.src_path == "010--intro.md"
         assert mock_file.dest_path == "intro/index.html"
         assert mock_file.url == "intro/"
 
@@ -110,7 +111,8 @@ class TestStripNumberPrefixPlugin:
         files = Files([mock_file])
         plugin.on_files(files, mkdocs_config)
 
-        assert mock_file.src_path == "guides/setup.md"
+        # Source path unchanged.
+        assert mock_file.src_path == "guides/020--setup.md"
         assert mock_file.dest_path == "guides/setup/index.html"
         assert mock_file.url == "guides/setup/"
 
@@ -176,7 +178,7 @@ class TestStripNumberPrefixPlugin:
 
         files = Files([file1, file2])
 
-        # Should not raise, but files should remain unchanged
+        # Should not raise, and source paths remain unchanged
         plugin.on_files(files, mkdocs_config)
 
         assert file1.src_path == "010--intro.md"
@@ -300,6 +302,6 @@ class TestStripNumberPrefixPlugin:
         plugin.on_files(files, mkdocs_config)
 
         # Check results
-        assert file1.src_path == "intro.md"
+        assert file1.src_path == "010--intro.md"
         assert file2.src_path == "about.md"  # unchanged
-        assert file3.src_path == "guide.md"
+        assert file3.src_path == "020--guide.md"

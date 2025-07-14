@@ -70,3 +70,4 @@ site/
 
 # setuptools-scm
 src/mkdocs_strip_number_prefix/_version.py
+external/
