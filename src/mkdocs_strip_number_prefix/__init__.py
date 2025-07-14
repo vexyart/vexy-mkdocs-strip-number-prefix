@@ -4,7 +4,7 @@
 from mkdocs_strip_number_prefix.plugin import StripNumberPrefixPlugin
 
 try:
-    from mkdocs_strip_number_prefix._version import __version__
+    from mkdocs_strip_number_prefix._version import __version__  # type: ignore[import-untyped]
 except ImportError:
     __version__ = "0.0.0+unknown"
 

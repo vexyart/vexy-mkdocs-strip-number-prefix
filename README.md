@@ -1,8 +1,8 @@
 # vexy-mkdocs-strip-number-prefix
 
 [![PyPI version](https://badge.fury.io/py/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
-[![CI](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/workflows/CI/badge.svg)](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/vexy-mkdocs-strip-number-prefix)
+[![CI](https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/workflows/CI/badge.svg)](https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/vexyart/vexy-mkdocs-strip-number-prefix/branch/main/graph/badge.svg)](https://codecov.io/gh/vexyart/vexy-mkdocs-strip-number-prefix)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python versions](https://img.shields.io/pypi/pyversions/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
 
@@ -267,7 +267,7 @@ This shows:
 ### Setup
 
 ```bash
-git clone https://github.com/yourusername/vexy-mkdocs-strip-number-prefix
+git clone https://github.com/vexyart/vexy-mkdocs-strip-number-prefix
 cd vexy-mkdocs-strip-number-prefix
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -313,6 +313,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/vexy-mkdocs-strip-number-prefix/discussions)
-- 📖 **Documentation**: [Project Documentation](https://yourusername.github.io/vexy-mkdocs-strip-number-prefix/)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/discussions)
+- 📖 **Documentation**: [Project Documentation](https://vexyart.github.io/vexy-mkdocs-strip-number-prefix/)

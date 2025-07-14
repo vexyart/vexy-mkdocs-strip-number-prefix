@@ -18,7 +18,7 @@ from mkdocs.structure.pages import Page
 logger = logging.getLogger(__name__)
 
 
-class StripNumberPrefixPlugin(BasePlugin):
+class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-arg]
     """Removes leading numeric prefixes from dest_path and page URLs.
 
     This plugin allows you to:
@@ -34,7 +34,7 @@ class StripNumberPrefixPlugin(BasePlugin):
         ("strip_links", config_options.Type(bool, default=False)),
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the plugin."""
         self.prefix_pattern: Optional[Pattern[str]] = None
         self.processed_files: dict[str, str] = {}
@@ -154,9 +154,9 @@ class StripNumberPrefixPlugin(BasePlugin):
 
             # Check if this is a processed file
             filename = Path(path_part).name
-            if self.prefix_pattern.match(filename):
+            if self.prefix_pattern and self.prefix_pattern.match(filename):
                 # Strip prefix
-                new_filename = self.prefix_pattern.sub("", filename)
+                new_filename = self.prefix_pattern.sub("", filename) if self.prefix_pattern else filename
                 parent = Path(path_part).parent
 
                 if parent == Path("."):
