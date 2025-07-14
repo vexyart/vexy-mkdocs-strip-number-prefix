@@ -13,6 +13,7 @@ from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.exceptions import PluginError
 from mkdocs.plugins import BasePlugin
 from mkdocs.structure.files import File, Files
+from mkdocs.structure.nav import Navigation
 from mkdocs.structure.pages import Page
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
         ("verbose", config_options.Type(bool, default=False)),
         ("strict", config_options.Type(bool, default=True)),
         ("strip_links", config_options.Type(bool, default=False)),
+        ("strip_nav_titles", config_options.Type(bool, default=True)),
     )
 
     def __init__(self) -> None:
@@ -155,6 +157,47 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
                 self.processed_files[file_obj.src_path] = new_virtual_path
 
         return files
+
+    def on_nav(self, nav: Navigation, config: MkDocsConfig, files: Files) -> Navigation:  # noqa: ARG002
+        """Strip numeric prefixes from navigation titles."""
+        if not self.config["strip_nav_titles"] or not self.prefix_pattern:
+            return nav
+
+        def clean_navigation_titles(nav_items: list) -> None:
+            """Recursively clean titles in navigation items."""
+            for item in nav_items:
+                if hasattr(item, "title") and item.title:
+                    original_title = item.title
+                    
+                    # Strip the numeric prefix from the title
+                    # Handle both file format (010--title) and navigation format (010 title)
+                    nav_pattern = re.compile(r"^\d+\s+")
+                    if self.prefix_pattern.match(original_title) or nav_pattern.match(original_title):
+                        # Use the navigation pattern if the original pattern doesn't match
+                        if nav_pattern.match(original_title):
+                            cleaned_title = nav_pattern.sub("", original_title).strip()
+                        else:
+                            cleaned_title = self.prefix_pattern.sub("", original_title)
+                            # Convert dashes to spaces and clean up formatting
+                            cleaned_title = cleaned_title.replace("--", "").replace("-", " ").strip()
+                        
+                        # Capitalize appropriately
+                        if cleaned_title:
+                            item.title = cleaned_title
+
+                            if self.config["verbose"]:
+                                logger.info(
+                                    f"StripNumberPrefix: Navigation title updated: {original_title} -> {cleaned_title}"
+                                )
+
+                # Recursively process children (for sections)
+                if hasattr(item, "children") and item.children:
+                    clean_navigation_titles(item.children)
+
+        # Process all navigation items
+        clean_navigation_titles(nav.items)
+
+        return nav
 
     def on_page_markdown(
         self, markdown: str, page: Page, config: MkDocsConfig, files: Files  # noqa: ARG002

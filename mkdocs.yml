@@ -44,6 +44,7 @@ plugins:
       pattern: '^\d+--'
       strict: false
       strip_links: true
+      strip_nav_titles: true
       verbose: true
 
 # Extensions
