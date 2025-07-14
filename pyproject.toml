@@ -1,0 +1,135 @@
+# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/pyproject.toml
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vexy-mkdocs-strip-number-prefix"
+dynamic = ["version"]
+description = "MkDocs plugin to strip numeric prefixes from page URLs while keeping them in source files"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+maintainers = [
+    {name = "Vexy Lines Team", email = "help@vexy.art"},
+]
+keywords = ["mkdocs", "plugin", "documentation", "url", "slug", "prefix", "numbering"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: MkDocs",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "mkdocs>=1.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "ruff>=0.1.0",
+    "black>=23.7.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+]
+docs = [
+    "vexy-mkdocs-material>=9.4.0",
+    "mkdocstrings[python]>=0.24.0",
+    "vexy-mkdocs-awesome-nav>=1.2.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Documentation = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Repository = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Issues = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues"
+Changelog = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/blob/main/CHANGELOG.md"
+
+[project.entry-points."mkdocs.plugins"]
+strip-number-prefix = "mkdocs_strip_number_prefix.plugin:StripNumberPrefixPlugin"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mkdocs_strip_number_prefix"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/CHANGELOG.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "PIE", # flake8-pie
+    "PL",  # pylint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "PLR0913", # Too many arguments
+    "PLR2004", # Magic value used in comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assert in tests
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "mkdocs.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/mkdocs_strip_number_prefix"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90
