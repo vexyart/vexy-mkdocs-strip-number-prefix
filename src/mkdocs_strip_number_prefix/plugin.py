@@ -1,4 +1,4 @@
-# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/plugin.py
+# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/src/mkdocs_strip_number_prefix/plugin.py  # noqa: E501
 """Plugin to strip numeric prefixes from page URLs while keeping them in source files."""
 
 import logging
@@ -47,11 +47,11 @@ class StripNumberPrefixPlugin(BasePlugin):
             if self.config["verbose"]:
                 logger.info(f"StripNumberPrefix: Using pattern '{self.config['pattern']}'")
         except re.error as e:
-            raise PluginError(f"Invalid regex pattern '{self.config['pattern']}': {e}")
+            raise PluginError(f"Invalid regex pattern '{self.config['pattern']}': {e}") from e
 
         return config
 
-    def on_files(self, files: Files, config: MkDocsConfig) -> Files:
+    def on_files(self, files: Files, config: MkDocsConfig) -> Files:  # noqa: PLR0912, ARG002
         """Process files to strip numeric prefixes from paths and URLs."""
         if not self.prefix_pattern:
             return files
@@ -86,7 +86,7 @@ class StripNumberPrefixPlugin(BasePlugin):
 
         # Check for collisions
         dest_counts: dict[str, list[str]] = defaultdict(list)
-        for file, old_path, new_path in transformations:
+        for _file, old_path, new_path in transformations:
             dest_counts[new_path].append(old_path)
 
         # Report collisions
@@ -115,10 +115,6 @@ class StripNumberPrefixPlugin(BasePlugin):
                 # Update file paths
                 file.src_path = new_path
 
-                # For dest_path and url, we need to strip the prefix from the basename
-                old_basename = Path(old_path).name
-                new_basename = Path(new_path).name
-
                 # For dest_path, we need to replace the directory name (without .md extension)
                 old_name_without_ext = Path(old_path).stem  # filename without extension
                 new_name_without_ext = Path(new_path).stem  # filename without extension
@@ -135,7 +131,7 @@ class StripNumberPrefixPlugin(BasePlugin):
         return files
 
     def on_page_markdown(
-        self, markdown: str, page: Page, config: MkDocsConfig, files: Files
+        self, markdown: str, page: Page, config: MkDocsConfig, files: Files  # noqa: ARG002
     ) -> str:
         """Optionally rewrite internal links to remove prefixes."""
         if not self.config["strip_links"] or not self.prefix_pattern:
