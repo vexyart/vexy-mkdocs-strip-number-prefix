@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **NEW**: Navigation title stripping via `strip_nav_titles` configuration option (enabled by default)
 - **NEW**: `on_nav` hook to clean navigation titles in both tab and sidebar navigation
+- **NEW**: Comprehensive test suite expansion from 14 to 24 tests with 95% coverage
+- **NEW**: Complete navigation functionality testing with edge case coverage
 - Virtual path strategy for collision detection without modifying source paths
 - Support for both file format (`010--title`) and navigation format (`010 title`) patterns
 - Demo documentation with MkDocs Material theme showcasing plugin functionality

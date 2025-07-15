@@ -34,6 +34,7 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
         ("strict", config_options.Type(bool, default=True)),
         ("strip_links", config_options.Type(bool, default=False)),
         ("strip_nav_titles", config_options.Type(bool, default=True)),
+        ("dry_run", config_options.Type(bool, default=False)),
     )
 
     def __init__(self) -> None:
@@ -125,6 +126,15 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
                 # In non-strict mode, skip files that would cause collisions
                 if has_collision and new_virtual_path in self.collisions:
                     continue
+
+                # If dry-run mode is enabled, only log what would be done
+                if self.config["dry_run"]:
+                    logger.info(
+                        f"DRY RUN: Would transform {file_obj.src_path} -> "
+                        f"dest_path: {file_obj.dest_path} (would become cleaned), "
+                        f"url: {file_obj.url} (would become cleaned)"
+                    )
+                    continue
                 # ------------------------------------------------------------------
                 # ``dest_path`` and ``url`` should present the cleaned structure to
                 # the outside world.  We build new versions by applying the prefix
@@ -161,6 +171,10 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
     def on_nav(self, nav: Navigation, config: MkDocsConfig, files: Files) -> Navigation:  # noqa: ARG002
         """Strip numeric prefixes from navigation titles."""
         if not self.config["strip_nav_titles"] or not self.prefix_pattern:
+            return nav
+
+        if self.config["dry_run"]:
+            logger.info("DRY RUN: Navigation title processing would be performed but is skipped in dry-run mode")
             return nav
 
         def clean_navigation_titles(nav_items: list) -> None:
@@ -204,6 +218,10 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
     ) -> str:
         """Optionally rewrite internal links to remove prefixes."""
         if not self.config["strip_links"] or not self.prefix_pattern:
+            return markdown
+
+        if self.config["dry_run"]:
+            logger.info("DRY RUN: Link rewriting would be performed but is skipped in dry-run mode")
             return markdown
 
         # Pattern to match markdown links
