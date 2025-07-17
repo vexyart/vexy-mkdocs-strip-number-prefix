@@ -1,8 +1,6 @@
 # this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/tests/test_plugin.py
 """Tests for vexy-mkdocs-strip-number-prefix plugin."""
 
-import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -495,7 +493,7 @@ class TestStripNumberPrefixPlugin:
     def test_strip_nav_titles_config_option(self, mkdocs_config):
         """Test strip_nav_titles configuration option."""
         plugin = StripNumberPrefixPlugin()
-        
+
         # Test default value
         plugin.config = {
             "pattern": r"^\d+--",
@@ -504,9 +502,9 @@ class TestStripNumberPrefixPlugin:
             "strip_links": False,
             "strip_nav_titles": True,
         }
-        
+
         assert plugin.config["strip_nav_titles"] is True
-        
+
         # Test disabling it
         plugin.config["strip_nav_titles"] = False
         assert plugin.config["strip_nav_titles"] is False
@@ -517,18 +515,18 @@ class TestStripNumberPrefixPlugin:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
         site_dir = tmp_path / "site"
-        
+
         # Create test markdown files with numeric prefixes
         (docs_dir / "index.md").write_text("# Welcome\nThis is the home page.")
         (docs_dir / "010--getting-started.md").write_text("# Getting Started\nIntroduction content.")
         (docs_dir / "020--advanced.md").write_text("# Advanced Topics\nAdvanced content.")
-        
+
         # Create subdirectory with prefixed files
         guides_dir = docs_dir / "030--guides"
         guides_dir.mkdir()
         (guides_dir / "010--setup.md").write_text("# Setup Guide\nSetup instructions.")
         (guides_dir / "020--deployment.md").write_text("# Deployment\nDeploy instructions.")
-        
+
         # Create MkDocs config
         mkdocs_config = {
             'site_name': 'Test Site',
@@ -547,41 +545,41 @@ class TestStripNumberPrefixPlugin:
             ],
             'theme': 'mkdocs'
         }
-        
+
         # Import MkDocs and run build
         try:
-            from mkdocs.config import load_config
             from mkdocs.commands.build import build
-            
+            from mkdocs.config import load_config
+
             # Create config file temporarily
             config_file = tmp_path / "mkdocs.yml"
             import yaml
             config_file.write_text(yaml.dump(mkdocs_config))
-            
+
             # Load and build
             config = load_config(config_file=str(config_file))
             build(config)
-            
+
             # Verify the build succeeded and files exist
             assert site_dir.exists()
             assert (site_dir / "index.html").exists()
-            
+
             # Verify clean URLs were generated (no numeric prefixes)
             assert (site_dir / "getting-started" / "index.html").exists()
             assert (site_dir / "advanced" / "index.html").exists()
             assert (site_dir / "guides" / "setup" / "index.html").exists()
             assert (site_dir / "guides" / "deployment" / "index.html").exists()
-            
+
             # Verify original prefixed paths don't exist in output
             assert not (site_dir / "010--getting-started").exists()
             assert not (site_dir / "020--advanced").exists()
             assert not (site_dir / "030--guides").exists()
-            
+
             # Read generated HTML to verify navigation was cleaned
             index_content = (site_dir / "index.html").read_text()
             assert "getting-started" in index_content  # Clean URL
             assert "010--getting-started" not in index_content  # No prefix in HTML
-            
+
         except ImportError:
             pytest.skip("MkDocs not available for end-to-end testing")
         except Exception as e:
@@ -593,10 +591,10 @@ class TestStripNumberPrefixPlugin:
 
         # Test with Windows-style paths - simulate actual Windows behavior
         import os
-        
+
         mock_file = Mock(spec=File)
         mock_file.is_documentation_page.return_value = True
-        
+
         # Use actual path separators but ensure processing happens
         if os.sep == '\\':  # Running on Windows
             mock_file.src_path = "guides\\010--setup.md"
@@ -607,7 +605,7 @@ class TestStripNumberPrefixPlugin:
             mock_file.src_path = "guides/010--setup.md"  # Use forward slash for Unix
             mock_file.dest_path = "guides/010--setup/index.html"
             expected_dest = "guides/setup/index.html"
-        
+
         mock_file.url = "guides/010--setup/"  # URLs always use forward slashes
         mock_file.src_uri = mock_file.src_path
 
@@ -617,10 +615,10 @@ class TestStripNumberPrefixPlugin:
         # Verify paths were processed correctly regardless of separator
         # Source path should remain unchanged
         assert mock_file.src_path.endswith("010--setup.md")
-        
+
         # Dest path should have prefix removed
         assert mock_file.dest_path == expected_dest
-        
+
         # URL should be clean and use forward slashes
         assert mock_file.url == "guides/setup/"
 
@@ -653,6 +651,125 @@ class TestStripNumberPrefixPlugin:
             call_args = str(mock_logger.info.call_args_list)
             assert "DRY RUN" in call_args
 
+    # Additional tests for improved coverage
+    def test_on_files_no_prefix_pattern(self, plugin, mkdocs_config, mock_file):
+        """Test on_files when prefix_pattern is None."""
+        plugin.prefix_pattern = None  # Explicitly set to None
+
+        mock_file.src_path = "010--intro.md"
+        mock_file.dest_path = "010--intro/index.html"
+        mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
+
+        files = Files([mock_file])
+        result = plugin.on_files(files, mkdocs_config)
+
+        # Should return files unchanged when no prefix pattern
+        assert result == files
+        assert mock_file.src_path == "010--intro.md"  # Should remain unchanged
+        assert mock_file.dest_path == "010--intro/index.html"  # Should remain unchanged
+        assert mock_file.url == "010--intro/"  # Should remain unchanged
+
+    def test_file_with_extension_processing(self, plugin, mkdocs_config):
+        """Test processing files with extensions in path components."""
+        plugin.on_config(mkdocs_config)
+
+        # Create a file with extension in directory name (edge case)
+        mock_file = Mock(spec=File)
+        mock_file.is_documentation_page.return_value = True
+        mock_file.src_path = "010--intro.md"
+        mock_file.dest_path = "010--intro.html"  # Note: .html extension
+        mock_file.url = "010--intro.html"
+        mock_file.src_uri = "010--intro.md"
+
+        files = Files([mock_file])
+        plugin.on_files(files, mkdocs_config)
+
+        # Should properly handle extension in dest_path
+        assert mock_file.dest_path == "intro.html"
+        assert mock_file.url == "intro.html"
+
+    def test_navigation_title_empty_after_cleaning(self, plugin, mkdocs_config):
+        """Test navigation title handling when cleaned title becomes empty."""
+        plugin.on_config(mkdocs_config)
+
+        # Create nav item that would result in empty title after cleaning
+        nav_item = Mock()
+        nav_item.title = "010--"  # Would result in empty string after cleaning
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+        files = Files([])
+
+        plugin.on_nav(nav, mkdocs_config, files)
+
+        # Should handle empty cleaned title appropriately
+        assert nav_item.title == "010--"  # Should remain unchanged if cleaned result is empty
+
+    def test_link_rewriting_verbose_logging(self, plugin, mkdocs_config):
+        """Test verbose logging in link rewriting."""
+        plugin.config["strip_links"] = True
+        plugin.config["verbose"] = True
+        plugin.on_config(mkdocs_config)
+
+        markdown = "Check out [Introduction](010--intro.md) for more info."
+        page = Mock(spec=Page)
+        files = Files([])
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_page_markdown(markdown, page, mkdocs_config, files)
+
+            # Should log link rewriting when verbose
+            mock_logger.info.assert_called()
+            call_args = str(mock_logger.info.call_args_list)
+            assert "Rewriting link" in call_args
+            assert "010--intro.md" in call_args
+            assert "intro.md" in call_args
+
+    def test_config_validation_edge_cases(self, plugin, mkdocs_config):
+        """Test configuration validation edge cases."""
+        # Test with empty pattern - should compile successfully but match nothing
+        plugin.config["pattern"] = ""
+
+        # Empty pattern should not raise error but creates a pattern that matches nothing
+        result = plugin.on_config(mkdocs_config)
+        assert result == mkdocs_config
+        assert plugin.prefix_pattern is not None
+
+        # Test that empty pattern matches at the beginning of any string (zero-width match)
+        assert plugin.prefix_pattern.match("010--test.md")  # Matches empty string at start
+        assert plugin.prefix_pattern.match("abc")  # Matches empty string at start
+        assert plugin.prefix_pattern.match("")  # Matches empty string
+
+        # Test that substitution with empty pattern removes nothing
+        assert plugin.prefix_pattern.sub("", "010--test.md") == "010--test.md"
+
+    def test_processed_files_tracking(self, plugin, mkdocs_config):
+        """Test that processed files are properly tracked."""
+        plugin.on_config(mkdocs_config)
+
+        mock_file = Mock(spec=File)
+        mock_file.is_documentation_page.return_value = True
+        mock_file.src_path = "010--intro.md"
+        mock_file.dest_path = "010--intro/index.html"
+        mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
+
+        files = Files([mock_file])
+        plugin.on_files(files, mkdocs_config)
+
+        # Should track processed files
+        assert "010--intro.md" in plugin.processed_files
+        assert plugin.processed_files["010--intro.md"] == "intro.md"
+
+    def test_initialization_state(self, plugin):
+        """Test plugin initialization state."""
+        # Test that plugin initializes with correct default state
+        assert plugin.prefix_pattern is None
+        assert plugin.processed_files == {}
+        assert len(plugin.collisions) == 0
+
     def test_dry_run_mode_navigation(self, plugin, mkdocs_config):
         """Test dry-run mode for navigation processing."""
         plugin.config["dry_run"] = True
@@ -678,6 +795,7 @@ class TestStripNumberPrefixPlugin:
             call_args = str(mock_logger.info.call_args_list)
             assert "DRY RUN" in call_args
 
+    # Additional tests for improved coverage
     def test_dry_run_mode_links(self, plugin, mkdocs_config):
         """Test dry-run mode for link rewriting."""
         plugin.config["dry_run"] = True
@@ -698,3 +816,5 @@ class TestStripNumberPrefixPlugin:
             mock_logger.info.assert_called()
             call_args = str(mock_logger.info.call_args_list)
             assert "DRY RUN" in call_args
+
+    # Additional tests for improved coverage

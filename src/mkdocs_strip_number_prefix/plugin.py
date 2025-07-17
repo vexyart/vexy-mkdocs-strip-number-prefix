@@ -60,7 +60,7 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
             return files
 
         # First pass: collect all transformations
-        transformations: list[tuple[File, str, str]] = []
+        transformations: list[tuple[File, str]] = []
 
         for file in files:
             if not file.is_documentation_page():
@@ -182,7 +182,7 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
             for item in nav_items:
                 if hasattr(item, "title") and item.title:
                     original_title = item.title
-                    
+
                     # Strip the numeric prefix from the title
                     # Handle both file format (010--title) and navigation format (010 title)
                     nav_pattern = re.compile(r"^\d+\s+")
@@ -194,7 +194,7 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
                             cleaned_title = self.prefix_pattern.sub("", original_title)
                             # Convert dashes to spaces and clean up formatting
                             cleaned_title = cleaned_title.replace("--", "").replace("-", " ").strip()
-                        
+
                         # Capitalize appropriately
                         if cleaned_title:
                             item.title = cleaned_title
