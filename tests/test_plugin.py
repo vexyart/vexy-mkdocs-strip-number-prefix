@@ -652,6 +652,215 @@ class TestStripNumberPrefixPlugin:
             assert "DRY RUN" in call_args
 
     # Additional tests for improved coverage
+
+    def test_end_to_end_mkdocs_build_with_complex_structure(self, tmp_path):
+        """Comprehensive end-to-end test with complex documentation structure."""
+        # Create a more complex MkDocs project structure
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        site_dir = tmp_path / "site"
+
+        # Create nested structure with various prefix patterns
+        (docs_dir / "index.md").write_text("# Welcome\nThis is the home page.")
+        (docs_dir / "010--getting-started.md").write_text("# Getting Started\nIntroduction content.")
+        (docs_dir / "020--advanced.md").write_text("# Advanced Topics\nAdvanced content.")
+
+        # Create subdirectory with prefixed files
+        guides_dir = docs_dir / "030--guides"
+        guides_dir.mkdir()
+        (guides_dir / "010--setup.md").write_text("# Setup Guide\nSetup instructions.")
+        (guides_dir / "020--deployment.md").write_text("# Deployment\nDeploy instructions.")
+
+        # Create deeply nested structure
+        advanced_dir = docs_dir / "040--advanced"
+        advanced_dir.mkdir()
+        config_dir = advanced_dir / "010--configuration"
+        config_dir.mkdir()
+        (config_dir / "010--basic.md").write_text("# Basic Configuration\nBasic config.")
+        (config_dir / "020--advanced.md").write_text("# Advanced Configuration\nAdvanced config.")
+
+        # Create MkDocs config with comprehensive plugin settings
+        mkdocs_config = {
+            'site_name': 'Test Site',
+            'docs_dir': str(docs_dir),
+            'site_dir': str(site_dir),
+            'plugins': [
+                'search',
+                {
+                    'strip-number-prefix': {
+                        'pattern': r'^\d+--',
+                        'strict': True,
+                        'strip_nav_titles': True,
+                        'strip_links': True,
+                        'verbose': False,
+                        'dry_run': False
+                    }
+                }
+            ],
+            'theme': 'mkdocs'
+        }
+
+        # Import MkDocs and run build
+        try:
+            from mkdocs.commands.build import build
+            from mkdocs.config import load_config
+
+            # Create config file temporarily
+            config_file = tmp_path / "mkdocs.yml"
+            import yaml
+            config_file.write_text(yaml.dump(mkdocs_config))
+
+            # Load and build
+            config = load_config(config_file=str(config_file))
+            build(config)
+
+            # Verify the build succeeded and files exist
+            assert site_dir.exists()
+            assert (site_dir / "index.html").exists()
+
+            # Verify clean URLs were generated at all levels
+            assert (site_dir / "getting-started" / "index.html").exists()
+            assert (site_dir / "advanced" / "index.html").exists()
+            assert (site_dir / "guides" / "setup" / "index.html").exists()
+            assert (site_dir / "guides" / "deployment" / "index.html").exists()
+            assert (site_dir / "advanced" / "configuration" / "basic" / "index.html").exists()
+            assert (site_dir / "advanced" / "configuration" / "advanced" / "index.html").exists()
+
+            # Verify original prefixed paths don't exist in output
+            assert not (site_dir / "010--getting-started").exists()
+            assert not (site_dir / "020--advanced").exists()
+            assert not (site_dir / "030--guides").exists()
+            assert not (site_dir / "040--advanced").exists()
+
+        except ImportError:
+            pytest.skip("MkDocs not available for comprehensive end-to-end testing")
+        except Exception as e:
+            pytest.fail(f"Comprehensive end-to-end MkDocs build failed: {e}")
+
+    def test_plugin_with_all_options_enabled(self, tmp_path):
+        """Test plugin with all configuration options enabled."""
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        site_dir = tmp_path / "site"
+
+        # Create test files with internal links
+        (docs_dir / "index.md").write_text("""# Welcome
+        See [Getting Started](010--getting-started.md) for setup.
+        Also check [Advanced Guide](020--advanced.md#configuration).
+        """)
+        (docs_dir / "010--getting-started.md").write_text("""# Getting Started
+        Back to [Home](index.md) or continue to [Advanced](020--advanced.md).
+        """)
+        (docs_dir / "020--advanced.md").write_text("""# Advanced Topics
+        ## Configuration
+        Advanced configuration details.
+        """)
+
+        mkdocs_config = {
+            'site_name': 'Full Options Test',
+            'docs_dir': str(docs_dir),
+            'site_dir': str(site_dir),
+            'plugins': [
+                'search',
+                {
+                    'strip-number-prefix': {
+                        'pattern': r'^\d+--',
+                        'strict': True,
+                        'strip_nav_titles': True,
+                        'strip_links': True,
+                        'verbose': True,
+                        'dry_run': False
+                    }
+                }
+            ],
+            'theme': 'mkdocs'
+        }
+
+        try:
+            from mkdocs.commands.build import build
+            from mkdocs.config import load_config
+
+            config_file = tmp_path / "mkdocs.yml"
+            import yaml
+            config_file.write_text(yaml.dump(mkdocs_config))
+
+            config = load_config(config_file=str(config_file))
+            build(config)
+
+            # Verify links were rewritten in generated HTML
+            index_html = (site_dir / "index.html").read_text()
+            assert "getting-started" in index_html
+            assert "010--getting-started" not in index_html
+
+            getting_started_html = (site_dir / "getting-started" / "index.html").read_text()
+            assert "advanced" in getting_started_html
+            assert "020--advanced" not in getting_started_html
+
+        except ImportError:
+            pytest.skip("MkDocs not available for full options testing")
+        except Exception as e:
+            pytest.fail(f"Full options test failed: {e}")
+
+    def test_dry_run_comprehensive(self, plugin, mkdocs_config):
+        """Comprehensive test of dry-run mode across all plugin functions."""
+        plugin.config["dry_run"] = True
+        plugin.config["strip_links"] = True
+        plugin.config["strip_nav_titles"] = True
+        plugin.config["verbose"] = True
+        plugin.on_config(mkdocs_config)
+
+        # Test dry-run for files
+        mock_file = Mock(spec=File)
+        mock_file.is_documentation_page.return_value = True
+        mock_file.src_path = "010--intro.md"
+        mock_file.dest_path = "010--intro/index.html"
+        mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
+
+        files = Files([mock_file])
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_files(files, mkdocs_config)
+
+            # Files should remain unchanged
+            assert mock_file.src_path == "010--intro.md"
+            assert mock_file.dest_path == "010--intro/index.html"
+            assert mock_file.url == "010--intro/"
+
+            # Should log dry-run for files
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
+
+        # Test dry-run for navigation
+        from mkdocs.structure.nav import Navigation
+        nav_item = Mock()
+        nav_item.title = "010--getting-started"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_nav(nav, mkdocs_config, files)
+
+            # Navigation should remain unchanged
+            assert nav_item.title == "010--getting-started"
+
+            # Should log dry-run for navigation
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
+
+        # Test dry-run for links
+        from mkdocs.structure.pages import Page
+        markdown = "See [Getting Started](010--getting-started.md) for details."
+        page = Mock(spec=Page)
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            result = plugin.on_page_markdown(markdown, page, mkdocs_config, files)
+
+            # Markdown should remain unchanged
+            assert result == markdown
+
+            # Should log dry-run for links
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
     def test_on_files_no_prefix_pattern(self, plugin, mkdocs_config, mock_file):
         """Test on_files when prefix_pattern is None."""
         plugin.prefix_pattern = None  # Explicitly set to None
@@ -796,6 +1005,215 @@ class TestStripNumberPrefixPlugin:
             assert "DRY RUN" in call_args
 
     # Additional tests for improved coverage
+
+    def test_end_to_end_mkdocs_build_with_complex_structure(self, tmp_path):
+        """Comprehensive end-to-end test with complex documentation structure."""
+        # Create a more complex MkDocs project structure
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        site_dir = tmp_path / "site"
+
+        # Create nested structure with various prefix patterns
+        (docs_dir / "index.md").write_text("# Welcome\nThis is the home page.")
+        (docs_dir / "010--getting-started.md").write_text("# Getting Started\nIntroduction content.")
+        (docs_dir / "020--advanced.md").write_text("# Advanced Topics\nAdvanced content.")
+
+        # Create subdirectory with prefixed files
+        guides_dir = docs_dir / "030--guides"
+        guides_dir.mkdir()
+        (guides_dir / "010--setup.md").write_text("# Setup Guide\nSetup instructions.")
+        (guides_dir / "020--deployment.md").write_text("# Deployment\nDeploy instructions.")
+
+        # Create deeply nested structure
+        advanced_dir = docs_dir / "040--advanced"
+        advanced_dir.mkdir()
+        config_dir = advanced_dir / "010--configuration"
+        config_dir.mkdir()
+        (config_dir / "010--basic.md").write_text("# Basic Configuration\nBasic config.")
+        (config_dir / "020--advanced.md").write_text("# Advanced Configuration\nAdvanced config.")
+
+        # Create MkDocs config with comprehensive plugin settings
+        mkdocs_config = {
+            'site_name': 'Test Site',
+            'docs_dir': str(docs_dir),
+            'site_dir': str(site_dir),
+            'plugins': [
+                'search',
+                {
+                    'strip-number-prefix': {
+                        'pattern': r'^\d+--',
+                        'strict': True,
+                        'strip_nav_titles': True,
+                        'strip_links': True,
+                        'verbose': False,
+                        'dry_run': False
+                    }
+                }
+            ],
+            'theme': 'mkdocs'
+        }
+
+        # Import MkDocs and run build
+        try:
+            from mkdocs.commands.build import build
+            from mkdocs.config import load_config
+
+            # Create config file temporarily
+            config_file = tmp_path / "mkdocs.yml"
+            import yaml
+            config_file.write_text(yaml.dump(mkdocs_config))
+
+            # Load and build
+            config = load_config(config_file=str(config_file))
+            build(config)
+
+            # Verify the build succeeded and files exist
+            assert site_dir.exists()
+            assert (site_dir / "index.html").exists()
+
+            # Verify clean URLs were generated at all levels
+            assert (site_dir / "getting-started" / "index.html").exists()
+            assert (site_dir / "advanced" / "index.html").exists()
+            assert (site_dir / "guides" / "setup" / "index.html").exists()
+            assert (site_dir / "guides" / "deployment" / "index.html").exists()
+            assert (site_dir / "advanced" / "configuration" / "basic" / "index.html").exists()
+            assert (site_dir / "advanced" / "configuration" / "advanced" / "index.html").exists()
+
+            # Verify original prefixed paths don't exist in output
+            assert not (site_dir / "010--getting-started").exists()
+            assert not (site_dir / "020--advanced").exists()
+            assert not (site_dir / "030--guides").exists()
+            assert not (site_dir / "040--advanced").exists()
+
+        except ImportError:
+            pytest.skip("MkDocs not available for comprehensive end-to-end testing")
+        except Exception as e:
+            pytest.fail(f"Comprehensive end-to-end MkDocs build failed: {e}")
+
+    def test_plugin_with_all_options_enabled(self, tmp_path):
+        """Test plugin with all configuration options enabled."""
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        site_dir = tmp_path / "site"
+
+        # Create test files with internal links
+        (docs_dir / "index.md").write_text("""# Welcome
+        See [Getting Started](010--getting-started.md) for setup.
+        Also check [Advanced Guide](020--advanced.md#configuration).
+        """)
+        (docs_dir / "010--getting-started.md").write_text("""# Getting Started
+        Back to [Home](index.md) or continue to [Advanced](020--advanced.md).
+        """)
+        (docs_dir / "020--advanced.md").write_text("""# Advanced Topics
+        ## Configuration
+        Advanced configuration details.
+        """)
+
+        mkdocs_config = {
+            'site_name': 'Full Options Test',
+            'docs_dir': str(docs_dir),
+            'site_dir': str(site_dir),
+            'plugins': [
+                'search',
+                {
+                    'strip-number-prefix': {
+                        'pattern': r'^\d+--',
+                        'strict': True,
+                        'strip_nav_titles': True,
+                        'strip_links': True,
+                        'verbose': True,
+                        'dry_run': False
+                    }
+                }
+            ],
+            'theme': 'mkdocs'
+        }
+
+        try:
+            from mkdocs.commands.build import build
+            from mkdocs.config import load_config
+
+            config_file = tmp_path / "mkdocs.yml"
+            import yaml
+            config_file.write_text(yaml.dump(mkdocs_config))
+
+            config = load_config(config_file=str(config_file))
+            build(config)
+
+            # Verify links were rewritten in generated HTML
+            index_html = (site_dir / "index.html").read_text()
+            assert "getting-started" in index_html
+            assert "010--getting-started" not in index_html
+
+            getting_started_html = (site_dir / "getting-started" / "index.html").read_text()
+            assert "advanced" in getting_started_html
+            assert "020--advanced" not in getting_started_html
+
+        except ImportError:
+            pytest.skip("MkDocs not available for full options testing")
+        except Exception as e:
+            pytest.fail(f"Full options test failed: {e}")
+
+    def test_dry_run_comprehensive(self, plugin, mkdocs_config):
+        """Comprehensive test of dry-run mode across all plugin functions."""
+        plugin.config["dry_run"] = True
+        plugin.config["strip_links"] = True
+        plugin.config["strip_nav_titles"] = True
+        plugin.config["verbose"] = True
+        plugin.on_config(mkdocs_config)
+
+        # Test dry-run for files
+        mock_file = Mock(spec=File)
+        mock_file.is_documentation_page.return_value = True
+        mock_file.src_path = "010--intro.md"
+        mock_file.dest_path = "010--intro/index.html"
+        mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
+
+        files = Files([mock_file])
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_files(files, mkdocs_config)
+
+            # Files should remain unchanged
+            assert mock_file.src_path == "010--intro.md"
+            assert mock_file.dest_path == "010--intro/index.html"
+            assert mock_file.url == "010--intro/"
+
+            # Should log dry-run for files
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
+
+        # Test dry-run for navigation
+        from mkdocs.structure.nav import Navigation
+        nav_item = Mock()
+        nav_item.title = "010--getting-started"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_nav(nav, mkdocs_config, files)
+
+            # Navigation should remain unchanged
+            assert nav_item.title == "010--getting-started"
+
+            # Should log dry-run for navigation
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
+
+        # Test dry-run for links
+        from mkdocs.structure.pages import Page
+        markdown = "See [Getting Started](010--getting-started.md) for details."
+        page = Mock(spec=Page)
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            result = plugin.on_page_markdown(markdown, page, mkdocs_config, files)
+
+            # Markdown should remain unchanged
+            assert result == markdown
+
+            # Should log dry-run for links
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
     def test_dry_run_mode_links(self, plugin, mkdocs_config):
         """Test dry-run mode for link rewriting."""
         plugin.config["dry_run"] = True
@@ -818,3 +1236,212 @@ class TestStripNumberPrefixPlugin:
             assert "DRY RUN" in call_args
 
     # Additional tests for improved coverage
+
+    def test_end_to_end_mkdocs_build_with_complex_structure(self, tmp_path):
+        """Comprehensive end-to-end test with complex documentation structure."""
+        # Create a more complex MkDocs project structure
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        site_dir = tmp_path / "site"
+
+        # Create nested structure with various prefix patterns
+        (docs_dir / "index.md").write_text("# Welcome\nThis is the home page.")
+        (docs_dir / "010--getting-started.md").write_text("# Getting Started\nIntroduction content.")
+        (docs_dir / "020--advanced.md").write_text("# Advanced Topics\nAdvanced content.")
+
+        # Create subdirectory with prefixed files
+        guides_dir = docs_dir / "030--guides"
+        guides_dir.mkdir()
+        (guides_dir / "010--setup.md").write_text("# Setup Guide\nSetup instructions.")
+        (guides_dir / "020--deployment.md").write_text("# Deployment\nDeploy instructions.")
+
+        # Create deeply nested structure
+        advanced_dir = docs_dir / "040--advanced"
+        advanced_dir.mkdir()
+        config_dir = advanced_dir / "010--configuration"
+        config_dir.mkdir()
+        (config_dir / "010--basic.md").write_text("# Basic Configuration\nBasic config.")
+        (config_dir / "020--advanced.md").write_text("# Advanced Configuration\nAdvanced config.")
+
+        # Create MkDocs config with comprehensive plugin settings
+        mkdocs_config = {
+            'site_name': 'Test Site',
+            'docs_dir': str(docs_dir),
+            'site_dir': str(site_dir),
+            'plugins': [
+                'search',
+                {
+                    'strip-number-prefix': {
+                        'pattern': r'^\d+--',
+                        'strict': True,
+                        'strip_nav_titles': True,
+                        'strip_links': True,
+                        'verbose': False,
+                        'dry_run': False
+                    }
+                }
+            ],
+            'theme': 'mkdocs'
+        }
+
+        # Import MkDocs and run build
+        try:
+            from mkdocs.commands.build import build
+            from mkdocs.config import load_config
+
+            # Create config file temporarily
+            config_file = tmp_path / "mkdocs.yml"
+            import yaml
+            config_file.write_text(yaml.dump(mkdocs_config))
+
+            # Load and build
+            config = load_config(config_file=str(config_file))
+            build(config)
+
+            # Verify the build succeeded and files exist
+            assert site_dir.exists()
+            assert (site_dir / "index.html").exists()
+
+            # Verify clean URLs were generated at all levels
+            assert (site_dir / "getting-started" / "index.html").exists()
+            assert (site_dir / "advanced" / "index.html").exists()
+            assert (site_dir / "guides" / "setup" / "index.html").exists()
+            assert (site_dir / "guides" / "deployment" / "index.html").exists()
+            assert (site_dir / "advanced" / "configuration" / "basic" / "index.html").exists()
+            assert (site_dir / "advanced" / "configuration" / "advanced" / "index.html").exists()
+
+            # Verify original prefixed paths don't exist in output
+            assert not (site_dir / "010--getting-started").exists()
+            assert not (site_dir / "020--advanced").exists()
+            assert not (site_dir / "030--guides").exists()
+            assert not (site_dir / "040--advanced").exists()
+
+        except ImportError:
+            pytest.skip("MkDocs not available for comprehensive end-to-end testing")
+        except Exception as e:
+            pytest.fail(f"Comprehensive end-to-end MkDocs build failed: {e}")
+
+    def test_plugin_with_all_options_enabled(self, tmp_path):
+        """Test plugin with all configuration options enabled."""
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        site_dir = tmp_path / "site"
+
+        # Create test files with internal links
+        (docs_dir / "index.md").write_text("""# Welcome
+        See [Getting Started](010--getting-started.md) for setup.
+        Also check [Advanced Guide](020--advanced.md#configuration).
+        """)
+        (docs_dir / "010--getting-started.md").write_text("""# Getting Started
+        Back to [Home](index.md) or continue to [Advanced](020--advanced.md).
+        """)
+        (docs_dir / "020--advanced.md").write_text("""# Advanced Topics
+        ## Configuration
+        Advanced configuration details.
+        """)
+
+        mkdocs_config = {
+            'site_name': 'Full Options Test',
+            'docs_dir': str(docs_dir),
+            'site_dir': str(site_dir),
+            'plugins': [
+                'search',
+                {
+                    'strip-number-prefix': {
+                        'pattern': r'^\d+--',
+                        'strict': True,
+                        'strip_nav_titles': True,
+                        'strip_links': True,
+                        'verbose': True,
+                        'dry_run': False
+                    }
+                }
+            ],
+            'theme': 'mkdocs'
+        }
+
+        try:
+            from mkdocs.commands.build import build
+            from mkdocs.config import load_config
+
+            config_file = tmp_path / "mkdocs.yml"
+            import yaml
+            config_file.write_text(yaml.dump(mkdocs_config))
+
+            config = load_config(config_file=str(config_file))
+            build(config)
+
+            # Verify links were rewritten in generated HTML
+            index_html = (site_dir / "index.html").read_text()
+            assert "getting-started" in index_html
+            assert "010--getting-started" not in index_html
+
+            getting_started_html = (site_dir / "getting-started" / "index.html").read_text()
+            assert "advanced" in getting_started_html
+            assert "020--advanced" not in getting_started_html
+
+        except ImportError:
+            pytest.skip("MkDocs not available for full options testing")
+        except Exception as e:
+            pytest.fail(f"Full options test failed: {e}")
+
+    def test_dry_run_comprehensive(self, plugin, mkdocs_config):
+        """Comprehensive test of dry-run mode across all plugin functions."""
+        plugin.config["dry_run"] = True
+        plugin.config["strip_links"] = True
+        plugin.config["strip_nav_titles"] = True
+        plugin.config["verbose"] = True
+        plugin.on_config(mkdocs_config)
+
+        # Test dry-run for files
+        mock_file = Mock(spec=File)
+        mock_file.is_documentation_page.return_value = True
+        mock_file.src_path = "010--intro.md"
+        mock_file.dest_path = "010--intro/index.html"
+        mock_file.url = "010--intro/"
+        mock_file.src_uri = "010--intro.md"
+
+        files = Files([mock_file])
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_files(files, mkdocs_config)
+
+            # Files should remain unchanged
+            assert mock_file.src_path == "010--intro.md"
+            assert mock_file.dest_path == "010--intro/index.html"
+            assert mock_file.url == "010--intro/"
+
+            # Should log dry-run for files
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
+
+        # Test dry-run for navigation
+        from mkdocs.structure.nav import Navigation
+        nav_item = Mock()
+        nav_item.title = "010--getting-started"
+        nav_item.children = []
+
+        nav = Mock(spec=Navigation)
+        nav.items = [nav_item]
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            plugin.on_nav(nav, mkdocs_config, files)
+
+            # Navigation should remain unchanged
+            assert nav_item.title == "010--getting-started"
+
+            # Should log dry-run for navigation
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
+
+        # Test dry-run for links
+        from mkdocs.structure.pages import Page
+        markdown = "See [Getting Started](010--getting-started.md) for details."
+        page = Mock(spec=Page)
+
+        with patch("mkdocs_strip_number_prefix.plugin.logger") as mock_logger:
+            result = plugin.on_page_markdown(markdown, page, mkdocs_config, files)
+
+            # Markdown should remain unchanged
+            assert result == markdown
+
+            # Should log dry-run for links
+            assert any("DRY RUN" in str(call) for call in mock_logger.info.call_args_list)
