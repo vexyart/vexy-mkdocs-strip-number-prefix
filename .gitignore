@@ -68,6 +68,5 @@ coverage.xml
 site/
 .cache/
 
-# setuptools-scm
+# hatch-vcs generated version files
 src/mkdocs_strip_number_prefix/_version.py
-external/

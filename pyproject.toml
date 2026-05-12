@@ -66,6 +66,9 @@ strip-number-prefix = "mkdocs_strip_number_prefix.plugin:StripNumberPrefixPlugin
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.build.hooks.vcs]
+version-file = "src/mkdocs_strip_number_prefix/_version.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/mkdocs_strip_number_prefix"]
 
