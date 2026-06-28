@@ -210,8 +210,8 @@ docs/
 
 ## Compatibility
 
-- **MkDocs**: >= 1.5.0
-- **Python**: >= 3.9
+- **MkDocs**: >= 1.5.0 (tested against 1.5.x and 1.6.x)
+- **Python**: >= 3.9 (tested on 3.9, 3.10, 3.11, 3.12, 3.13)
 - **Works with**:
   - [Material for MkDocs](https://squidfunk.github.io/vexy-mkdocs-material/)
   - [vexy-mkdocs-awesome-nav](https://github.com/lukasgeiter/vexy-mkdocs-awesome-nav)

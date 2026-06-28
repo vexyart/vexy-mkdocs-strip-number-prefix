@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CI matrix now covers Python 3.13 and a dedicated MkDocs 1.5 / 1.6 compatibility job
+- `src_docs/050--migration.md` — migration guide comparing with `mkdocs-awesome-pages-plugin`
+- `src_docs/060--edge-cases.md` — documents `00--` prefix, filename collisions, and strict-mode error messages
+- `STYLE_GUIDE.md` — prose, code-example, and changelog conventions for this repository
+- Test `test_strip_links_relative_in_subdirectory`: verifies `strip_links: true` correctly handles sibling and parent-relative `../` links originating from within a subdirectory
+- `pyyaml>=6.0` added to `[dev]` extras so end-to-end build tests are fully self-contained
+- Inline comments in `on_files()` explaining why all three of `src_path` / `dest_path` / `url` must be updated separately
+- Inline comment explaining the ordered-dict (insertion-order) behaviour of collision detection
+
+### Changed
+- `[docs]` optional extras updated to use real PyPI package names (`mkdocs-material`, `mkdocs-awesome-pages-plugin`)
+
 ### Fixed
 - **CRITICAL**: Fixed src_path modification issue that caused FileNotFoundError during MkDocs builds
 - Fixed navigation title display to strip numeric prefixes from tab and sidebar navigation

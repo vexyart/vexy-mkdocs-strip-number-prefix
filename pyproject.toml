@@ -29,6 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Documentation",
     "Topic :: Software Development :: Documentation",
     "Topic :: Text Processing",
@@ -42,15 +43,16 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
+    "pyyaml>=6.0",
     "ruff>=0.1.0",
     "black>=23.7.0",
     "mypy>=1.5.0",
     "pre-commit>=3.3.0",
 ]
 docs = [
-    "vexy-mkdocs-material>=9.4.0",
+    "mkdocs-material>=9.4.0",
     "mkdocstrings[python]>=0.24.0",
-    "vexy-mkdocs-awesome-nav>=1.2.2",
+    "mkdocs-awesome-pages-plugin>=2.9.0",
 ]
 
 [project.urls]

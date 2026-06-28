@@ -97,6 +97,11 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
         # same *clean* (virtual) path would override each other in the final
         # site.  We use the cleaned virtual path as the key and store the
         # original ``src_path`` values for reporting.
+        #
+        # We use a plain dict (defaultdict) rather than an ordered dict
+        # explicitly, but Python 3.7+ guarantees insertion order, so the
+        # first file encountered wins in non-strict mode — consistent with
+        # filesystem ordering from MkDocs' file collector.
         # ------------------------------------------------------------------
 
         dest_counts: dict[str, list[str]] = defaultdict(list)
@@ -136,11 +141,23 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
                     )
                     continue
                 # ------------------------------------------------------------------
-                # ``dest_path`` and ``url`` should present the cleaned structure to
-                # the outside world.  We build new versions by applying the prefix
-                # removal to every path component while preserving the file
-                # extension (if any) and the trailing slash semantics used by
-                # MkDocs (``use_directory_urls``).
+                # Three attributes govern how MkDocs exposes each file:
+                #
+                #   src_path  – filesystem path MkDocs reads the source from.
+                #               We intentionally leave this UNCHANGED so that
+                #               abs_src_path (disk lookup) continues to work.
+                #
+                #   dest_path – relative output path written inside site_dir.
+                #               Must be cleaned so the output directory tree
+                #               has no numeric prefixes.
+                #
+                #   url       – the URL MkDocs uses to generate <a href> links
+                #               and the in-page canonical tag.  Must match
+                #               dest_path (modulo the trailing slash that
+                #               use_directory_urls adds).
+                #
+                # All three must be kept consistent; updating only one causes
+                # mismatches between links and generated files.
                 # ------------------------------------------------------------------
 
                 # Helper for stripping a single component (keeps file extension).
@@ -155,11 +172,11 @@ class StripNumberPrefixPlugin(BasePlugin):  # type: ignore[no-untyped-call,type-
                         return cleaned
                     return component
 
-                # Build cleaned dest_path
+                # Build cleaned dest_path (output file location, e.g. intro/index.html)
                 dest_parts = [_clean_component(part) for part in Path(file_obj.dest_path).parts]
                 file_obj.dest_path = str(Path(*dest_parts))
 
-                # Build cleaned url (keep trailing slash if present in original)
+                # Build cleaned url; preserve trailing slash added by use_directory_urls.
                 url_parts = [_clean_component(part) for part in Path(file_obj.url).parts]
                 file_obj.url = "/".join(url_parts) + ("/" if file_obj.url.endswith("/") else "")
 
