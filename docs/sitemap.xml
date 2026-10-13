@@ -1,63 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://example.com/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/getting-started/introduction/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/installation/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/getting-started/installation/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/quickstart/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/getting-started/configuration/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/configuration/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/basic-syntax/headings/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/how-it-works/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/basic-syntax/text-formatting/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/links-and-navigation/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/basic-syntax/lists/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/edge-cases/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/basic-syntax/links/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/migration/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/advanced-features/code-blocks/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/development/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/advanced-features/tables/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/examples/file-layouts/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/advanced-features/admonitions/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://example.com/advanced-features/images/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://example.com/examples/real-world-usage/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://example.com/examples/common-patterns/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://example.com/examples/best-practices/</loc>
-         <lastmod>2025-07-15</lastmod>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/examples/prefix-patterns/</loc>
+        <lastmod>2026-10-13</lastmod>
+        <changefreq>daily</changefreq>
     </url>
 </urlset>

@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/mkdocs-strip-number-prefix
+      url: https://pypi.org/p/vexy-mkdocs-strip-number-prefix
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -55,6 +55,8 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
         # Trusted publishing configured in PyPI project settings
 
   create-release:

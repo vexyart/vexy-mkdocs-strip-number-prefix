@@ -1,4 +1,4 @@
-# this_file: more/mkdocs-plugins/vexy-mkdocs-strip-number-prefix/pyproject.toml
+# this_file: pyproject.toml
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -57,7 +57,7 @@ docs = [
 
 [project.urls]
 Homepage = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
-Documentation = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
+Documentation = "https://vexy.dev/vexy-mkdocs-strip-number-prefix/"
 Repository = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix"
 Issues = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues"
 Changelog = "https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/blob/main/CHANGELOG.md"
@@ -80,6 +80,7 @@ include = [
     "/tests",
     "/README.md",
     "/CHANGELOG.md",
+    "/LICENSE",
 ]
 
 [tool.ruff]

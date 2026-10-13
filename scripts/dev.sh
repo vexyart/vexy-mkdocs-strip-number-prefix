@@ -110,13 +110,7 @@ case $COMMAND in
     
     docs)
         echo -e "${BLUE}📚 Building documentation...${NC}"
-        if [[ -f "build_docs.py" ]]; then
-            python build_docs.py
-        elif [[ -f "mkdocs.yml" ]]; then
-            mkdocs build
-        else
-            echo -e "${YELLOW}⚠️  No documentation build script found${NC}"
-        fi
+        src_docs/build.sh
         echo -e "${GREEN}✅ Documentation built${NC}"
         ;;
     

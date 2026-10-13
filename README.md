@@ -6,6 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python versions](https://img.shields.io/pypi/pyversions/vexy-mkdocs-strip-number-prefix.svg)](https://pypi.org/project/vexy-mkdocs-strip-number-prefix/)
 
+**Documentation:** https://vexy.dev/vexy-mkdocs-strip-number-prefix/
+
 A lightweight MkDocs plugin that strips numeric prefixes from page URLs while preserving them in source filenames for natural sorting.
 
 ## Features
@@ -70,20 +72,22 @@ All configuration options with their defaults:
 ```yaml
 plugins:
   - strip-number-prefix:
-      pattern: '^\\d+--'     # Regex pattern for prefix (default: '^\\d+--')
+      pattern: '^\d+--'     # Regex pattern for prefix (default: '^\d+--')
       verbose: false         # Enable debug logging (default: false)
       strict: true           # Fail on slug collisions (default: true)
       strip_links: false     # Strip prefixes from markdown links (default: false)
+      strip_nav_titles: true # Strip prefixes from navigation titles (default: true)
+      dry_run: false         # Log changes without applying them (default: false)
 ```
 
 ### Pattern Examples
 
 | Pattern | Matches | Example |
 |---------|---------|---------|
-| `^\\d+--` | Any digits + `--` | `123--file.md` |
-| `^\\d{3}--` | Exactly 3 digits + `--` | `001--file.md` |
-| `^\\d+-` | Any digits + `-` | `42-file.md` |
-| `^\\d+\\.` | Any digits + `.` | `1.file.md` |
+| `^\d+--` | Any digits + `--` | `123--file.md` |
+| `^\d{3}--` | Exactly 3 digits + `--` | `001--file.md` |
+| `^\d+-` | Any digits + `-` | `42-file.md` |
+| `^\d+_` | Any digits + `_` | `01_file.md` |
 
 ### Collision Handling
 
@@ -116,6 +120,11 @@ After:
 [Setup Guide](setup.md)
 ```
 
+> **Caution:** MkDocs resolves links against the prefixed source filenames, so
+> rewritten links are reported as "not found" and stay unresolved. In most
+> projects, leave `strip_links: false` and link to `020--setup.md`; MkDocs then
+> writes the clean URL for you.
+
 ## Examples
 
 ### Basic Usage
@@ -141,7 +150,7 @@ theme:
 plugins:
   - search
   - strip-number-prefix:
-      pattern: '^\\d{3}--'
+      pattern: '^\d{3}--'
       verbose: true
 ```
 
@@ -154,7 +163,7 @@ plugins:
   - search
   - awesome-nav
   - strip-number-prefix:
-      pattern: '^\\d+--'
+      pattern: '^\d+--'
       strip_links: true
 ```
 
@@ -164,7 +173,7 @@ plugins:
 # mkdocs.yml
 plugins:
   - strip-number-prefix:
-      pattern: '^\\d{2}\\.'  # Matches: 01.file.md, 99.file.md
+      pattern: '^\d{2}_'  # Matches: 01_file.md, 99_file.md
       strict: false
 ```
 
@@ -232,19 +241,17 @@ ERROR: Multiple files would map to 'intro.md': 010--intro.md, 020--intro.md
 
 ### Broken Links
 
-When `strip_links: false` (default), use clean slugs in links:
+Link to the prefixed source filename. MkDocs resolves it to the clean URL:
 
 ```markdown
-✅ [Next page](configuration.md)
-❌ [Next page](030--configuration.md)
+✅ [Next page](030--configuration.md)
+❌ [Next page](configuration.md)   # no source file has this name
 ```
 
-When `strip_links: true`, both forms work:
-
-```markdown
-✅ [Next page](configuration.md)
-✅ [Next page](030--configuration.md)  # Auto-converted
-```
+Keep `strip_links: false` (the default). With `strip_links: true` the link is
+rewritten to the clean filename before MkDocs resolves it, and MkDocs reports
+"the target is not found among documentation files". See
+[Links and navigation](https://vexy.dev/vexy-mkdocs-strip-number-prefix/links-and-navigation/).
 
 ### Debug Mode
 
@@ -315,4 +322,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/vexyart/vexy-mkdocs-strip-number-prefix/discussions)
-- 📖 **Documentation**: [Project Documentation](https://vexyart.github.io/vexy-mkdocs-strip-number-prefix/)
+- 📖 **Documentation**: [Project Documentation](https://vexy.dev/vexy-mkdocs-strip-number-prefix/)
