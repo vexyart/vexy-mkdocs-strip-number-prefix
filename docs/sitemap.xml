@@ -2,57 +2,67 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/installation/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/quickstart/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/configuration/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/how-it-works/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/links-and-navigation/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/edge-cases/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/migration/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/development/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
+        <changefreq>daily</changefreq>
+    </url>
+    <url>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/source-api/</loc>
+        <lastmod>2026-11-17</lastmod>
+        <changefreq>daily</changefreq>
+    </url>
+    <url>
+        <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/topics/</loc>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/examples/file-layouts/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
     <url>
         <loc>https://vexy.dev/vexy-mkdocs-strip-number-prefix/examples/prefix-patterns/</loc>
-        <lastmod>2026-10-13</lastmod>
+        <lastmod>2026-11-17</lastmod>
         <changefreq>daily</changefreq>
     </url>
 </urlset>

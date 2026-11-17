@@ -1,0 +1,18 @@
+# this_file: src_docs/md/.nav.yml
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: 010--installation.md
+      - Quickstart: 020--quickstart.md
+  - Guide:
+      - Configuration: 030--configuration.md
+      - How it works: 040--how-it-works.md
+      - Links and navigation: 050--links-and-navigation.md
+      - Edge cases and troubleshooting: 060--edge-cases.md
+      - Migrating from awesome-pages: 070--migration.md
+  - Examples:
+      - File layouts: 080--examples/010--file-layouts.md
+      - Prefix patterns: 080--examples/020--prefix-patterns.md
+  - Development: 090--development.md
+  - Topics: 900--topics.md
+  - Source API: 900--source-api.md

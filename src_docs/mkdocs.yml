@@ -47,24 +47,22 @@ markdown_extensions:
   - pymdownx.tabbed: {alternate_style: true}
   - pymdownx.tasklist: {custom_checkbox: true}
 plugins:
-  - search
+  - materialx/meta
+  - materialx/tags
+  - awesome-nav
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [../src]
+          options:
+            allow_inspection: false
+            docstring_style: null
+            show_root_heading: true
+            show_source: true
+  - materialx/search
   # Dog-food: the source files below carry numeric prefixes (010--, 020--, ...)
   # and this plugin removes them from the published URLs.
   - strip-number-prefix:
       pattern: '^\d+--'
       strict: true
-nav:
-  - Home: index.md
-  - Getting started:
-      - Installation: 010--installation.md
-      - Quickstart: 020--quickstart.md
-  - Guide:
-      - Configuration: 030--configuration.md
-      - How it works: 040--how-it-works.md
-      - Links and navigation: 050--links-and-navigation.md
-      - Edge cases and troubleshooting: 060--edge-cases.md
-      - Migrating from awesome-pages: 070--migration.md
-  - Examples:
-      - File layouts: 080--examples/010--file-layouts.md
-      - Prefix patterns: 080--examples/020--prefix-patterns.md
-  - Development: 090--development.md
